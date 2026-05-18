@@ -1,4 +1,7 @@
 import { useState } from "react"
+import { format } from "date-fns"
+import { ru } from "date-fns/locale"
+import { CalendarIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,29 +13,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import type { Priority, Category, TimeBlock } from "@/types"
 
 interface NewTaskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock) => void
+  onSubmit: (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => void
+  defaultDate?: string
 }
 
-const NewTaskDialog = ({ open, onOpenChange, onSubmit }: NewTaskDialogProps) => {
+const NewTaskDialog = ({ open, onOpenChange, onSubmit, defaultDate }: NewTaskDialogProps) => {
+  const today = new Date()
   const [title, setTitle] = useState("")
   const [priority, setPriority] = useState<Priority>("medium")
   const [category, setCategory] = useState<Category>("personal")
   const [timeBlock, setTimeBlock] = useState<TimeBlock>("morning")
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    defaultDate ? new Date(defaultDate + "T00:00:00") : today
+  )
 
   const handleSubmit = () => {
     if (!title.trim()) return
-    onSubmit(title.trim(), priority, category, timeBlock)
+    const dueDate = selectedDate.toISOString().split("T")[0]
+    onSubmit(title.trim(), priority, category, timeBlock, dueDate)
     setTitle("")
     setPriority("medium")
     setCategory("personal")
     setTimeBlock("morning")
+    setSelectedDate(today)
     onOpenChange(false)
   }
+
+  const isToday = selectedDate.toDateString() === today.toDateString()
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,6 +110,29 @@ const NewTaskDialog = ({ open, onOpenChange, onSubmit }: NewTaskDialogProps) => 
                 <SelectItem value="evening">🌙 Вечер</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Дата</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal h-12">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {isToday
+                    ? "Сегодня"
+                    : format(selectedDate, "d MMMM yyyy", { locale: ru })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  locale={ru}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <Button onClick={handleSubmit} className="w-full" size="lg" disabled={!title.trim()}>

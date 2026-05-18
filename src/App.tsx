@@ -4,6 +4,7 @@ import { HashRouter, Route, Routes } from "react-router-dom"
 import { useEffect } from "react"
 import { useStore } from "./store/useStore"
 import TodayPage from "./pages/TodayPage"
+import CalendarPage from "./pages/CalendarPage"
 import SettingsPage from "./pages/SettingsPage"
 import StatsPage from "./pages/StatsPage"
 
@@ -26,6 +27,7 @@ const App = () => {
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<TodayPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>

@@ -5,7 +5,7 @@ import type { StoreState } from "./useStore"
 
 export interface TaskStore {
   tasks: Task[]
-  addTask: (title: string, priority?: Priority, category?: Category, timeBlock?: TimeBlock, aiGenerated?: boolean, aiNotes?: string) => Task
+  addTask: (title: string, priority?: Priority, category?: Category, timeBlock?: TimeBlock, aiGenerated?: boolean, aiNotes?: string, dueDate?: string) => Task
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: Task["status"]) => void
@@ -22,7 +22,7 @@ const getTodayString = () => new Date().toISOString().split("T")[0]
 export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set, get) => ({
   tasks: [],
 
-  addTask: (title, priority = "medium", category = "other", timeBlock, aiGenerated = false, aiNotes) => {
+  addTask: (title, priority = "medium", category = "other", timeBlock, aiGenerated = false, aiNotes, dueDate) => {
     const task: Task = {
       id: uuidv4(),
       title,
@@ -32,7 +32,7 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
       status: "todo",
       aiGenerated,
       aiNotes,
-      dueDate: getTodayString(),
+      dueDate: dueDate || getTodayString(),
       createdAt: new Date().toISOString(),
       order: get().tasks.length,
     }

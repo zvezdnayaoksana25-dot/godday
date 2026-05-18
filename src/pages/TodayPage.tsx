@@ -4,19 +4,11 @@ import { Sparkles } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import TabBar from "@/components/layout/TabBar"
 import DayProgressCircle from "@/components/DayProgressCircle"
-import TaskCard from "@/components/TaskCard"
+import DayView from "@/components/DayView"
 import NewTaskDialog from "@/components/NewTaskDialog"
 import MorningRoutine from "@/components/MorningRoutine"
 import { useStore } from "@/store/useStore"
 import type { Priority, Category, TimeBlock } from "@/types"
-
-const timeBlockLabels: Record<string, string> = {
-  morning: "Утро",
-  afternoon: "День",
-  evening: "Вечер",
-}
-
-const timeBlockOrder: TimeBlock[] = ["morning", "afternoon", "evening"]
 
 const TodayPage = () => {
   const navigate = useNavigate()
@@ -46,30 +38,13 @@ const TodayPage = () => {
     }
   }, [today, hasMorningRoutine, showMorningRoutine, hasApiKey])
 
-  const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock) => {
-    addTask(title, priority, category, timeBlock)
+  const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
+    addTask(title, priority, category, timeBlock, false, undefined, dueDate || today)
   }
 
   const handleComplete = (id: string) => {
-    const task = tasks.find((t) => t.id === id)
-    if (task?.status === "done") {
-      completeTask(id)
-    } else {
-      completeTask(id)
-    }
+    completeTask(id)
   }
-
-  const groupedTasks = timeBlockOrder.map((block) => ({
-    block,
-    tasks: todayTasks
-      .filter((t) => t.timeBlock === block)
-      .sort((a, b) => {
-        const priorityOrder = { high: 0, medium: 1, low: 2 }
-        return priorityOrder[a.priority] - priorityOrder[b.priority]
-      }),
-  }))
-
-  const otherTasks = todayTasks.filter((t) => !t.timeBlock)
 
   return (
     <>
@@ -112,66 +87,13 @@ const TodayPage = () => {
             <DayProgressCircle completed={completedToday} total={totalToday} />
           </div>
 
-          {totalToday === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Задач на сегодня нет</p>
-              <button
-                onClick={() => setShowNewTask(true)}
-                className="mt-3 text-primary text-sm font-medium"
-              >
-                + Добавить задачу
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {groupedTasks.map(
-              ({ block, tasks: blockTasks }) =>
-                blockTasks.length > 0 && (
-                  <div key={block}>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                      {timeBlockLabels[block]}
-                      <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                        {blockTasks.filter((t) => t.status === "done").length}/{blockTasks.length}
-                      </span>
-                    </h3>
-                    <div className="space-y-2">
-                      {blockTasks.map((task, i) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          onComplete={handleComplete}
-                          onDelete={deleteTask}
-                          index={i}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ),
-            )}
-
-            {otherTasks.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                  Без времени
-                  <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                    {otherTasks.filter((t) => t.status === "done").length}/{otherTasks.length}
-                  </span>
-                </h3>
-                <div className="space-y-2">
-                  {otherTasks.map((task, i) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onComplete={handleComplete}
-                      onDelete={deleteTask}
-                      index={i}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <DayView
+            tasks={todayTasks}
+            onComplete={handleComplete}
+            onDelete={deleteTask}
+            onAddTask={() => setShowNewTask(true)}
+            emptyMessage="Задач на сегодня нет"
+          />
         </div>
 
         <TabBar onAddTask={() => setShowNewTask(true)} />
