@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(() => ({
-  base: "/FlowDay/",
+  base: "/godday/",
   server: {
     host: "::",
     port: 8080,
