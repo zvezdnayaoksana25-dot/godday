@@ -1,3 +1,4 @@
+import { format } from "date-fns"
 import type { StateCreator } from "zustand"
 import type { Patterns, Category } from "@/types"
 import type { StoreState } from "./useStore"
@@ -24,7 +25,7 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
   recordDayData: (sleepScore, motivationScore, tasksTotal, tasksCompleted, postponedCategories) => {
     set((state) => {
       const p = state.patterns
-      const today = new Date().toISOString().split("T")[0]
+      const today = format(new Date(), "yyyy-MM-dd")
       const newMotivation = [...p.motivationHistory, { date: today, score: motivationScore }].slice(-30)
       const newSleep = [...p.sleepHistory, { date: today, score: sleepScore }].slice(-30)
 

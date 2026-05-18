@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { format } from "date-fns"
 import { Sparkles } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import TabBar from "@/components/layout/TabBar"
@@ -23,7 +24,7 @@ const TodayPage = () => {
   const [showNewTask, setShowNewTask] = useState(false)
   const morningShownRef = useRef(false)
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = format(new Date(), "yyyy-MM-dd")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
   const completedToday = todayTasks.filter((t) => t.status === "done").length
   const totalToday = todayTasks.length

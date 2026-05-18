@@ -19,7 +19,7 @@ const CalendarPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [showNewTask, setShowNewTask] = useState(false)
 
-  const selectedDateStr = selectedDate.toISOString().split("T")[0]
+  const selectedDateStr = format(selectedDate, "yyyy-MM-dd")
   const selectedTasks = tasks.filter((t) => t.dueDate === selectedDateStr)
 
   const monthStart = startOfMonth(currentMonth)
@@ -89,7 +89,7 @@ const CalendarPage = () => {
 
             <div className="grid grid-cols-7 gap-1">
               {allDays.map((day, i) => {
-                const dateStr = day.toISOString().split("T")[0]
+                const dateStr = format(day, "yyyy-MM-dd")
                 const hasTasks = taskDates.has(dateStr)
                 const isSelected = isSameDay(day, selectedDate)
                 const isCurrentMonth = isSameMonth(day, currentMonth)

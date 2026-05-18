@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react"
 import { motion } from "framer-motion"
+import { format } from "date-fns"
 import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -105,7 +106,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     if (isCompleting.current) return
     isCompleting.current = true
 
-    const today = new Date().toISOString().split("T")[0]
+    const today = format(new Date(), "yyyy-MM-dd")
 
     const newTasks: Task[] = morningSession.aiPlan.map((task: DayPlanTask, i: number) => ({
       id: uuidv4(),

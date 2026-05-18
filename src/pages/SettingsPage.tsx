@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { format } from "date-fns"
 import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2 } from "lucide-react"
 import TabBar from "@/components/layout/TabBar"
@@ -52,7 +53,7 @@ const SettingsPage = () => {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `flowday-backup-${new Date().toISOString().split("T")[0]}.json`
+      a.download = `flowday-backup-${format(new Date(), "yyyy-MM-dd")}.json`
       a.click()
       URL.revokeObjectURL(url)
     }

@@ -37,7 +37,7 @@ const NewTaskDialog = ({ open, onOpenChange, onSubmit, defaultDate }: NewTaskDia
 
   const handleSubmit = () => {
     if (!title.trim()) return
-    const dueDate = selectedDate.toISOString().split("T")[0]
+    const dueDate = format(selectedDate, "yyyy-MM-dd")
     onSubmit(title.trim(), priority, category, timeBlock, dueDate)
     setTitle("")
     setPriority("medium")

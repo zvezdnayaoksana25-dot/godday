@@ -1,3 +1,4 @@
+import { format } from "date-fns"
 import type { StateCreator } from "zustand"
 import type { DayPlan } from "@/types"
 import type { StoreState } from "./useStore"
@@ -11,7 +12,7 @@ export interface DayStore {
   hasMorningRoutine: (date: string) => boolean
 }
 
-const getTodayString = () => new Date().toISOString().split("T")[0]
+const getTodayString = () => format(new Date(), "yyyy-MM-dd")
 
 export const createDayStore: StateCreator<StoreState, [], [], DayStore> = (set, get) => ({
   dayPlans: {},

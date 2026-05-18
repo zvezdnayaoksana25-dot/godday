@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand"
 import { v4 as uuidv4 } from "uuid"
+import { format } from "date-fns"
 import type { Task, Priority, Category, TimeBlock } from "@/types"
 import type { StoreState } from "./useStore"
 
@@ -18,7 +19,7 @@ export interface TaskStore {
   getTodayTasks: () => Task[]
 }
 
-const getTodayString = () => new Date().toISOString().split("T")[0]
+const getTodayString = () => format(new Date(), "yyyy-MM-dd")
 
 export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set, get) => ({
   tasks: [],
