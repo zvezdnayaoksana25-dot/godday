@@ -27,6 +27,7 @@ export interface DayPlan {
   voiceNotes: string
   aiSummary: string
   completed: boolean
+  originalPlan: DayPlanTask[]
 }
 
 export interface Patterns {

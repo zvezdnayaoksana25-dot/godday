@@ -5,6 +5,7 @@ import {
   ADJUST_PLAN_PROMPT,
   EVENING_REPORT_PROMPT,
   PARSE_VOICE_PROMPT,
+  ADJUST_DAY_PROMPT,
 } from "@/utils/prompts"
 import type { DayPlanTask, EveningReport } from "@/types"
 
@@ -134,6 +135,35 @@ export async function parseVoiceInput(voiceText: string): Promise<
     priority: (t.priority as "high" | "medium" | "low") || "medium",
     category: (t.category as "work" | "personal" | "health" | "study" | "errand" | "other") || "other",
   }))
+}
+
+export async function adjustDayPlan(
+  currentTime: string,
+  originalPlan: DayPlanTask[],
+  completedTasks: string,
+  pendingTasks: string,
+  patternsSummary: string,
+  userInput: string,
+): Promise<{
+  summary: string
+  newTasks: DayPlanTask[]
+}> {
+  const prompt = ADJUST_DAY_PROMPT(
+    currentTime,
+    JSON.stringify(originalPlan),
+    completedTasks,
+    pendingTasks,
+    patternsSummary,
+    userInput,
+  )
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{ summary: string; newTasks: DayPlanTask[] }>(raw)
+  if (!parsed || !parsed.newTasks || !Array.isArray(parsed.newTasks)) {
+    throw new Error("AI вернул некорректный формат")
+  }
+
+  return parsed
 }
 
 export async function testGroqKey(apiKey: string): Promise<boolean> {

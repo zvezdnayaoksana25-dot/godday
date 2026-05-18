@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react"
 import { format } from "date-fns"
-import { Sparkles } from "lucide-react"
+import { Sparkles, Repeat } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import TabBar from "@/components/layout/TabBar"
 import DayProgressCircle from "@/components/DayProgressCircle"
 import DayView from "@/components/DayView"
 import NewTaskDialog from "@/components/NewTaskDialog"
 import MorningRoutine from "@/components/MorningRoutine"
+import DayAdjustDialog from "@/components/DayAdjustDialog"
 import { useStore } from "@/store/useStore"
 import type { Priority, Category, TimeBlock } from "@/types"
 
@@ -22,6 +23,7 @@ const TodayPage = () => {
 
   const [showMorningRoutine, setShowMorningRoutine] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
+  const [showAdjustDay, setShowAdjustDay] = useState(false)
   const morningShownRef = useRef(false)
 
   const today = format(new Date(), "yyyy-MM-dd")
@@ -48,6 +50,7 @@ const TodayPage = () => {
       )}
 
       <NewTaskDialog open={showNewTask} onOpenChange={setShowNewTask} onSubmit={handleAddTask} />
+      <DayAdjustDialog open={showAdjustDay} onOpenChange={setShowAdjustDay} />
 
       <div className="min-h-screen bg-background pb-24">
         <div className="px-5 pt-12 pb-6">
@@ -71,9 +74,21 @@ const TodayPage = () => {
             )}
           </div>
 
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-4">
             <DayProgressCircle completed={completedToday} total={totalToday} />
           </div>
+
+          {hasApiKey && totalToday > 0 && (
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => setShowAdjustDay(true)}
+                className="h-9 px-4 rounded-full bg-accent/60 text-accent-foreground flex items-center gap-2 text-xs font-medium hover:bg-accent transition-colors"
+              >
+                <Repeat className="h-3.5 w-3.5" />
+                Скорректировать день
+              </button>
+            </div>
+          )}
 
           <DayView
             tasks={todayTasks}

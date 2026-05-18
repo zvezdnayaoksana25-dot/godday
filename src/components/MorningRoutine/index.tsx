@@ -132,6 +132,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       voiceNotes: voiceInput,
       aiSummary: morningSession.aiGreeting,
       completed: false,
+      originalPlan: morningSession.aiPlan,
     }
     saveDayPlan(plan)
 
