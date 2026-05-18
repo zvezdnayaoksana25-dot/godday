@@ -38,12 +38,13 @@ const TodayPage = () => {
   const todayTasks = tasks.filter((t) => t.dueDate === today)
   const completedToday = todayTasks.filter((t) => t.status === "done").length
   const totalToday = todayTasks.length
+  const hasApiKey = !!settings.groqApiKey
 
   useEffect(() => {
-    if (!hasMorningRoutine(today) && !showMorningRoutine) {
+    if (hasApiKey && !hasMorningRoutine(today) && !showMorningRoutine) {
       setShowMorningRoutine(true)
     }
-  }, [today, hasMorningRoutine, showMorningRoutine])
+  }, [today, hasMorningRoutine, showMorningRoutine, hasApiKey])
 
   const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock) => {
     addTask(title, priority, category, timeBlock)
@@ -93,16 +94,16 @@ const TodayPage = () => {
                 Доброе утро, {getDisplayName()} 🌸
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {settings.groqApiKey ? "AI подключён" : "Добавь API ключ в настройках"}
+                {hasApiKey ? "AI подключён" : "Добавь Groq API ключ в настройках ✨"}
               </p>
             </div>
             {!hasMorningRoutine(today) && (
               <button
-                onClick={() => setShowMorningRoutine(true)}
+                onClick={() => hasApiKey ? setShowMorningRoutine(true) : navigate("/settings")}
                 className="h-10 px-4 rounded-full bg-primary/10 text-primary flex items-center gap-2 text-sm font-medium hover:bg-primary/20 transition-colors"
               >
                 <Sparkles className="h-4 w-4" />
-                Утро
+                {hasApiKey ? "Утро" : "Настрой AI"}
               </button>
             )}
           </div>
@@ -111,7 +112,7 @@ const TodayPage = () => {
             <DayProgressCircle completed={completedToday} total={totalToday} />
           </div>
 
-          {totalToday === 0 && !showMorningRoutine && (
+          {totalToday === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Задач на сегодня нет</p>
               <button
