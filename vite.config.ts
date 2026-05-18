@@ -1,13 +1,14 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { defineConfig } from "vite"
+import { VitePWA } from "vite-plugin-pwa"
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig(() => ({
-  base: "/Taskflow/",
+  base: "/FlowDay/",
   server: {
     host: "::",
     port: 8080,
@@ -15,55 +16,34 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     tailwindcss(),
-  ],
-  build: {
-    rolldownOptions: {
-      output: {
-        codeSplitting: {
-          groups: [
-            {
-              name: "vendor-react",
-              test: /node_modules[\\/]react/,
-              priority: 50,
-            },
-            {
-              name: "vendor-d3",
-              test: /node_modules[\\/]d3/,
-              priority: 45,
-            },
-            {
-              name: "vendor-motion",
-              test: /node_modules[\\/](framer-motion|@dnd-kit)/,
-              priority: 40,
-            },
-            {
-              name: "vendor",
-              test: /node_modules/,
-              priority: 30,
-            },
-            {
-              name: "landing",
-              test: /src\/(pages\/Index|components\/landing)/,
-              priority: 20,
-            },
-            {
-              name: "core",
-              test: /src/,
-              priority: 10,
-            },
-          ],
-        },
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.svg"],
+      manifest: {
+        name: "FlowDay — AI Task Manager",
+        short_name: "FlowDay",
+        description: "Умный таск-менеджер с AI",
+        theme_color: "#FFF0F5",
+        background_color: "#FFF0F5",
+        display: "standalone",
+        orientation: "portrait",
+        icons: [
+          {
+            src: "/favicon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
       },
-    },
-  },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: "./vitest.setup.ts",
-  },
-}));
+}))

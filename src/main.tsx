@@ -1,10 +1,5 @@
-import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
-import { migrateStorage } from "./lib/storage";
+import { createRoot } from "react-dom/client"
+import App from "./App.tsx"
+import "./index.css"
 
-// Initiate storage migration for legacy data
-migrateStorage().catch(console.error);
-
-// biome-ignore lint/style/noNonNullAssertion: root element is guaranteed
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<App />)

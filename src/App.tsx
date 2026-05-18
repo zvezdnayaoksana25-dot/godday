@@ -1,71 +1,38 @@
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LazyMotion, domAnimation } from "framer-motion";
-import { Suspense, lazy, useEffect } from "react";
-import { HashRouter, Route, Routes } from "react-router-dom";
-import { RouteTracker } from "./components/analytics/RouteTracker";
-import { DevTools } from "./components/DevTools";
-import { supabase } from "./lib/supabase";
-import { useAuth } from "./store/useStore";
-
-// Components
-import AuthCallback from "./pages/AuthCallback";
-import DashboardPage from "./pages/Dashboard";
-import NotFound from "./pages/NotFound";
-import { PrivacyPolicy } from "./pages/PrivacyPolicy";
-import ResetPassword from "./pages/ResetPassword";
-import { TermsOfService } from "./pages/TermsOfService";
-
-// Lazy-loaded landing page to trigger separate chunking
-const Index = lazy(() => import("./pages/Index"));
-
-const queryClient = new QueryClient();
+import { Toaster } from "@/components/ui/sonner"
+import { AnimatePresence } from "framer-motion"
+import { HashRouter, Route, Routes } from "react-router-dom"
+import { useEffect } from "react"
+import { useStore } from "./store/useStore"
+import TodayPage from "./pages/TodayPage"
+import SettingsPage from "./pages/SettingsPage"
+import StatsPage from "./pages/StatsPage"
 
 const App = () => {
-  const { setSession } = useAuth();
+  const theme = useStore((s) => s.settings.theme)
 
   useEffect(() => {
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [setSession]);
+    const root = document.documentElement
+    if (theme === "dark") {
+      root.classList.add("dark")
+    } else {
+      root.classList.remove("dark")
+    }
+  }, [theme])
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LazyMotion features={domAnimation}>
-        <TooltipProvider>
-          <Sonner richColors theme="dark" />
-          <HashRouter>
-            <RouteTracker />
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div></div>}>
-                    <Index />
-                  </Suspense>
-                }
-              />
-              <Route path="/app" element={<DashboardPage />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <DevTools />
-          </HashRouter>
-        </TooltipProvider>
-      </LazyMotion>
-    </QueryClientProvider>
-  );
-};
+    <>
+      <Toaster richColors position="top-center" />
+      <HashRouter>
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route path="/" element={<TodayPage />} />
+            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </AnimatePresence>
+      </HashRouter>
+    </>
+  )
+}
 
-export default App;
+export default App

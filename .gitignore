@@ -22,12 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-docs
+
 .env
 .env.local
-supabase
-coverage
-# Project Management & Backend
-conductor/*
-supabase/*
-conductor/
