@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2 } from "lucide-react"
 import TabBar from "@/components/layout/TabBar"
@@ -15,7 +14,8 @@ import { resetGroqClient } from "@/services/groq"
 
 const SettingsPage = () => {
   const navigate = useNavigate()
-  const { settings, updateSettings, getDisplayName } = useStore()
+  const settings = useStore((s) => s.settings)
+  const updateSettings = useStore((s) => s.updateSettings)
 
   const [showApiKey, setShowApiKey] = useState(false)
   const [showBotToken, setShowBotToken] = useState(false)
@@ -79,12 +79,7 @@ const SettingsPage = () => {
 
   return (
     <>
-      <motion.div
-        className="min-h-screen bg-background pb-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+      <div className="min-h-screen bg-background pb-24">
         <div className="px-5 pt-12 pb-6">
           <h1 className="text-2xl font-semibold mb-6">Настройки</h1>
 
@@ -274,7 +269,7 @@ const SettingsPage = () => {
         </div>
 
         <TabBar onAddTask={() => {}} />
-      </motion.div>
+      </div>
     </>
   )
 }

@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/sonner"
-import { AnimatePresence } from "framer-motion"
 import { HashRouter, Route, Routes } from "react-router-dom"
 import { useEffect } from "react"
 import { useStore } from "./store/useStore"
@@ -24,14 +23,12 @@ const App = () => {
     <>
       <Toaster richColors position="top-center" />
       <HashRouter>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<TodayPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </AnimatePresence>
+        <Routes>
+          <Route path="/" element={<TodayPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
       </HashRouter>
     </>
   )

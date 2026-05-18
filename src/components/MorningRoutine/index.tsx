@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X } from "lucide-react"
+import { useState, useCallback, useRef } from "react"
+import { motion } from "framer-motion"
+import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -9,7 +9,8 @@ import { useStore } from "@/store/useStore"
 import { generateMorningPlan, adjustPlan } from "@/services/ai"
 import { sendMorningPlan } from "@/services/telegram"
 import { startSpeechRecognition, isSpeechSupported } from "@/services/speech"
-import type { DayPlanTask, MorningSession } from "@/types"
+import type { DayPlanTask, MorningSession, Task } from "@/types"
+import { v4 as uuidv4 } from "uuid"
 
 const timeBlockLabels: Record<string, string> = {
   morning: "Утро",
@@ -34,29 +35,27 @@ interface MorningRoutineProps {
 }
 
 const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
-  const {
-    morningSession,
-    setMorningStep,
-    setSleepScore,
-    setMotivationScore,
-    setVoiceNotes,
-    setAIPlan,
-    setAILoading,
-    setAIError,
-    resetMorningSession,
-    saveDayPlan,
-    addTask,
-    getPatternsSummary,
-    getTodayTasks,
-    settings,
-    recordDayData,
-    patterns,
-  } = useStore()
+  const morningSession = useStore((s) => s.morningSession)
+  const setMorningStep = useStore((s) => s.setMorningStep)
+  const setSleepScore = useStore((s) => s.setSleepScore)
+  const setMotivationScore = useStore((s) => s.setMotivationScore)
+  const setVoiceNotes = useStore((s) => s.setVoiceNotes)
+  const setAIPlan = useStore((s) => s.setAIPlan)
+  const setAILoading = useStore((s) => s.setAILoading)
+  const setAIError = useStore((s) => s.setAIError)
+  const resetMorningSession = useStore((s) => s.resetMorningSession)
+  const saveDayPlan = useStore((s) => s.saveDayPlan)
+  const addTasks = useStore((s) => s.addTasks)
+  const getPatternsSummary = useStore((s) => s.getPatternsSummary)
+  const getTodayTasks = useStore((s) => s.getTodayTasks)
+  const recordDayData = useStore((s) => s.recordDayData)
+  const patterns = useStore((s) => s.patterns)
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
   const [adjustInput, setAdjustInput] = useState("")
   const [isAdjusting, setIsAdjusting] = useState(false)
+  const isCompleting = useRef(false)
 
   const handleNext = useCallback(() => {
     const stepOrder: MorningSession["step"][] = ["sleep", "motivation", "voice", "plan", "done"]
@@ -103,15 +102,30 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   }
 
   const handleAcceptPlan = async () => {
+    if (isCompleting.current) return
+    isCompleting.current = true
+
     const today = new Date().toISOString().split("T")[0]
 
-    morningSession.aiPlan.forEach((task: DayPlanTask) => {
-      addTask(task.title, task.priority, task.category, task.suggestedTime, true, task.aiNote)
-    })
+    const newTasks: Task[] = morningSession.aiPlan.map((task: DayPlanTask, i: number) => ({
+      id: uuidv4(),
+      title: task.title,
+      priority: task.priority,
+      category: task.category,
+      timeBlock: task.suggestedTime,
+      status: "todo" as const,
+      aiGenerated: true,
+      aiNotes: task.aiNote,
+      dueDate: today,
+      createdAt: new Date().toISOString(),
+      order: i,
+    }))
 
-    const plan: any = {
+    addTasks(newTasks)
+
+    const plan = {
       date: today,
-      taskIds: [],
+      taskIds: newTasks.map((t) => t.id),
       sleepScore: morningSession.sleepScore,
       motivationScore: morningSession.motivationScore,
       voiceNotes: voiceInput,
@@ -300,11 +314,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         if (morningSession.isLoading) {
           return (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                className="h-10 w-10 border-3 border-primary border-t-transparent rounded-full"
-              />
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
               <p className="text-muted-foreground">Составляю план...</p>
             </div>
           )
@@ -376,7 +386,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
                 />
                 <Button onClick={handleAdjustPlan} disabled={isAdjusting || !adjustInput.trim()} size="icon">
                   {isAdjusting ? (
-                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ArrowRight className="h-4 w-4" />
                   )}
@@ -405,12 +415,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   }
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm safe-bottom overflow-y-auto"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
+    <div className="fixed inset-0 z-50 bg-background safe-bottom overflow-y-auto">
       <div className="min-h-screen flex flex-col">
         <div className="flex items-center justify-between p-4">
           <button
@@ -452,13 +457,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
+            {renderStep()}
           </motion.div>
         </div>
 
         <div className="p-4 safe-bottom" />
       </div>
-    </motion.div>
+    </div>
   )
 }
 

@@ -6,6 +6,7 @@ import type { StoreState } from "./useStore"
 export interface TaskStore {
   tasks: Task[]
   addTask: (title: string, priority?: Priority, category?: Category, timeBlock?: TimeBlock, aiGenerated?: boolean, aiNotes?: string, dueDate?: string) => Task
+  addTasks: (newTasks: Task[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: Task["status"]) => void
@@ -38,6 +39,10 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
     }
     set((state) => ({ tasks: [...state.tasks, task] }))
     return task
+  },
+
+  addTasks: (newTasks) => {
+    set((state) => ({ tasks: [...state.tasks, ...newTasks] }))
   },
 
   updateTask: (id, updates) => {

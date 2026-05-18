@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { motion } from "framer-motion"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns"
 import { ru } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
@@ -11,7 +10,10 @@ import { cn } from "@/lib/utils"
 import type { Priority, Category, TimeBlock } from "@/types"
 
 const CalendarPage = () => {
-  const { tasks, completeTask, deleteTask, addTask } = useStore()
+  const tasks = useStore((s) => s.tasks)
+  const completeTask = useStore((s) => s.completeTask)
+  const deleteTask = useStore((s) => s.deleteTask)
+  const addTask = useStore((s) => s.addTask)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -60,12 +62,7 @@ const CalendarPage = () => {
         defaultDate={selectedDateStr}
       />
 
-      <motion.div
-        className="min-h-screen bg-background pb-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+      <div className="min-h-screen bg-background pb-24">
         <div className="px-5 pt-12 pb-6">
           <h1 className="text-2xl font-semibold mb-6">Календарь</h1>
 
@@ -152,7 +149,7 @@ const CalendarPage = () => {
         </div>
 
         <TabBar onAddTask={() => setShowNewTask(true)} />
-      </motion.div>
+      </div>
     </>
   )
 }

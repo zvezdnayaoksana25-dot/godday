@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useState, useEffect, useRef } from "react"
 import { Sparkles } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import TabBar from "@/components/layout/TabBar"
@@ -12,19 +11,17 @@ import type { Priority, Category, TimeBlock } from "@/types"
 
 const TodayPage = () => {
   const navigate = useNavigate()
-  const {
-    tasks,
-    completeTask,
-    deleteTask,
-    addTask,
-    dayPlans,
-    hasMorningRoutine,
-    getDisplayName,
-    settings,
-  } = useStore()
+  const tasks = useStore((s) => s.tasks)
+  const completeTask = useStore((s) => s.completeTask)
+  const deleteTask = useStore((s) => s.deleteTask)
+  const addTask = useStore((s) => s.addTask)
+  const hasMorningRoutine = useStore((s) => s.hasMorningRoutine)
+  const getDisplayName = useStore((s) => s.getDisplayName)
+  const settings = useStore((s) => s.settings)
 
   const [showMorningRoutine, setShowMorningRoutine] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
+  const morningShownRef = useRef(false)
 
   const today = new Date().toISOString().split("T")[0]
   const todayTasks = tasks.filter((t) => t.dueDate === today)
@@ -33,35 +30,25 @@ const TodayPage = () => {
   const hasApiKey = !!settings.groqApiKey
 
   useEffect(() => {
-    if (hasApiKey && !hasMorningRoutine(today) && !showMorningRoutine) {
+    if (hasApiKey && !hasMorningRoutine(today) && !morningShownRef.current && !showMorningRoutine) {
+      morningShownRef.current = true
       setShowMorningRoutine(true)
     }
-  }, [today, hasMorningRoutine, showMorningRoutine, hasApiKey])
+  }, [today, hasApiKey])
 
   const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
     addTask(title, priority, category, timeBlock, false, undefined, dueDate || today)
   }
 
-  const handleComplete = (id: string) => {
-    completeTask(id)
-  }
-
   return (
     <>
-      <AnimatePresence>
-        {showMorningRoutine && (
-          <MorningRoutine onComplete={() => setShowMorningRoutine(false)} />
-        )}
-      </AnimatePresence>
+      {showMorningRoutine && (
+        <MorningRoutine onComplete={() => setShowMorningRoutine(false)} />
+      )}
 
       <NewTaskDialog open={showNewTask} onOpenChange={setShowNewTask} onSubmit={handleAddTask} />
 
-      <motion.div
-        className="min-h-screen bg-background pb-24"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+      <div className="min-h-screen bg-background pb-24">
         <div className="px-5 pt-12 pb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -89,7 +76,7 @@ const TodayPage = () => {
 
           <DayView
             tasks={todayTasks}
-            onComplete={handleComplete}
+            onComplete={completeTask}
             onDelete={deleteTask}
             onAddTask={() => setShowNewTask(true)}
             emptyMessage="Задач на сегодня нет"
@@ -97,7 +84,7 @@ const TodayPage = () => {
         </div>
 
         <TabBar onAddTask={() => setShowNewTask(true)} />
-      </motion.div>
+      </div>
     </>
   )
 }
