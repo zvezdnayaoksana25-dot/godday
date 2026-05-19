@@ -42,6 +42,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const addTasks = useStore((s) => s.addTasks)
   const getConversationHistory = useStore((s) => s.getConversationHistory)
   const addConversationMessage = useStore((s) => s.addConversationMessage)
+  const getSemanticSummary = useStore((s) => s.getSemanticSummary)
 
   const today = new Date().toLocaleDateString("en-CA")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
@@ -85,6 +86,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
         getPatternsSummary(),
         userInput,
         conversationStr,
+        getSemanticSummary(),
       )
 
       const userMsg: AIConversationMessage = {
@@ -112,7 +114,6 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
     if (!result) return
 
     const today = new Date().toLocaleDateString("en-CA")
-    const pendingIds = new Set(pendingTasks.map((t) => t.id))
 
     pendingTasks.forEach((t) => deleteTask(t.id))
 

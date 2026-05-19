@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
-import { generateMorningPlan, adjustPlan } from "@/services/ai"
+import { generateMorningPlan, adjustPlan, extractSemanticMemory as extractSemanticMemoryAI } from "@/services/ai"
 import { sendMorningPlan } from "@/services/telegram"
 import { startSpeechRecognition, isSpeechSupported } from "@/services/speech"
 import type { DayPlanTask, MorningSession, Task, AIConversationMessage } from "@/types"
@@ -52,8 +52,12 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const recordDayData = useStore((s) => s.recordDayData)
   const patterns = useStore((s) => s.patterns)
   const addConversationMessage = useStore((s) => s.addConversationMessage)
+  const getConversationHistory = useStore((s) => s.getConversationHistory)
   const getDayPlan = useStore((s) => s.getDayPlan)
   const tasks = useStore((s) => s.tasks)
+  const getSemanticSummary = useStore((s) => s.getSemanticSummary)
+  const semanticMemory = useStore((s) => s.semanticMemory)
+  const setSemanticMemory = useStore((s) => s.setSemanticMemory)
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
@@ -66,8 +70,9 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const yesterdayPlan = getDayPlan(yesterday)
   const yesterdayTasks = tasks.filter((t) => t.dueDate === yesterday)
   const yesterdayCompleted = yesterdayTasks.filter((t) => t.status === "done")
+  const yesterdayPending = yesterdayTasks.filter((t) => t.status !== "done")
   const yesterdayData = yesterdayPlan
-    ? `Был план. Выполнено: ${yesterdayCompleted.length}/${yesterdayTasks.length}. Заметки: "${yesterdayPlan.voiceNotes || "нет"}"`
+    ? `Был план. Выполнено: ${yesterdayCompleted.length}/${yesterdayTasks.length}. Заметки: "${yesterdayPlan.voiceNotes || "нет"}". Перенесённые задачи: ${yesterdayPending.map((t) => t.title).join(", ") || "нет"}`
     : "Плана не было"
 
   const handleNext = useCallback(() => {
@@ -103,6 +108,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         getPatternsSummary(),
         pendingTasks,
         yesterdayData,
+        getSemanticSummary(),
       )
 
       const userMsg: AIConversationMessage = {
@@ -158,17 +164,34 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       aiCommentary: morningSession.aiCommentary,
       completed: false,
       originalPlan: morningSession.aiPlan,
-      conversationHistory: [],
     }
     saveDayPlan(plan)
 
     recordDayData(
       morningSession.sleepScore,
       morningSession.motivationScore,
-      patterns.avgTasksPerDay,
-      Math.round(patterns.avgTasksPerDay * patterns.avgCompletionRate),
+      newTasks.length,
+      0,
       patterns.frequentlyPostponedCategories,
     )
+
+    const history = getConversationHistoryForExtraction()
+    if (history) {
+      extractSemanticMemoryAI(
+        history.conversation,
+        voiceInput,
+        JSON.stringify(morningSession.aiPlan),
+      ).then((extracted) => {
+        const current = useStore.getState().semanticMemory
+        setSemanticMemory({
+          facts: [...new Set([...current.facts, ...(extracted.facts || [])])],
+          goals: [...new Set([...current.goals, ...(extracted.goals || [])])],
+          preferences: [...new Set([...current.preferences, ...(extracted.preferences || [])])],
+          projects: [...new Set([...current.projects, ...(extracted.projects || [])])],
+          lastUpdated: new Date().toISOString(),
+        })
+      }).catch(() => {})
+    }
 
     const planText = morningSession.aiPlan
       .map(
@@ -187,7 +210,14 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     if (!adjustInput.trim()) return
     setIsAdjusting(true)
     try {
-      const newPlan = await adjustPlan(morningSession.aiPlan, adjustInput)
+      const newPlan = await adjustPlan(
+        morningSession.aiPlan,
+        adjustInput,
+        morningSession.sleepScore,
+        morningSession.motivationScore,
+        getPatternsSummary(),
+        getSemanticSummary(),
+      )
       setAIPlan(newPlan, morningSession.aiGreeting, morningSession.aiCommentary, morningSession.aiEncouragement)
 
       const userMsg: AIConversationMessage = {
@@ -208,6 +238,16 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       setAIError(e.message || "Ошибка при корректировке")
     } finally {
       setIsAdjusting(false)
+    }
+  }
+
+  const getConversationHistoryForExtraction = () => {
+    const history = getConversationHistory(today)
+    if (history.length === 0) return null
+    return {
+      conversation: history
+        .map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`)
+        .join("\n\n"),
     }
   }
 

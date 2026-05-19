@@ -29,7 +29,6 @@ export interface DayPlan {
   aiCommentary: string
   completed: boolean
   originalPlan: DayPlanTask[]
-  conversationHistory: AIConversationMessage[]
 }
 
 export interface AIConversationMessage {
@@ -112,4 +111,12 @@ export interface AIStatsResult {
   patterns: string
   weeklyTrend: string
   recommendations: string[]
+}
+
+export interface SemanticMemory {
+  facts: string[]
+  goals: string[]
+  preferences: string[]
+  projects: string[]
+  lastUpdated: string
 }

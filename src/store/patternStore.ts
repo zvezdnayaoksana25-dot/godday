@@ -16,6 +16,7 @@ const defaultPatterns: Patterns = {
 export interface PatternStore {
   patterns: Patterns
   recordDayData: (sleepScore: number, motivationScore: number, tasksTotal: number, tasksCompleted: number, postponedCategories: Category[]) => void
+  recalcPatternsFromTasks: () => void
   getPatternsSummary: () => string
 }
 
@@ -40,14 +41,69 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
         .filter(([, count]) => count >= 2)
         .map(([cat]) => cat as Category)
 
+      const allDays = new Set([...p.motivationHistory.map((m) => m.date), ...p.sleepHistory.map((s) => s.date), today])
+      const totalTasksAllTime = state.tasks.reduce((sum, t) => {
+        if (allDays.has(t.dueDate || "")) return sum + 1
+        return sum
+      }, 0)
+      const newAvgTasks = allDays.size > 0 ? Math.round((totalTasksAllTime / allDays.size) * 10) / 10 : p.avgTasksPerDay
+
       return {
         patterns: {
           ...p,
           avgCompletionRate: newAvgRate,
+          avgTasksPerDay: newAvgTasks,
           motivationHistory: newMotivation,
           sleepHistory: newSleep,
           frequentlyPostponedCategories: frequentlyPostponed,
           lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
+  },
+
+  recalcPatternsFromTasks: () => {
+    set((state) => {
+      const p = state.patterns
+      const tasksByDate: Record<string, number> = {}
+      state.tasks.forEach((t) => {
+        if (t.dueDate) {
+          tasksByDate[t.dueDate] = (tasksByDate[t.dueDate] || 0) + 1
+        }
+      })
+      const dates = Object.keys(tasksByDate)
+      if (dates.length === 0) return state
+
+      const totalTasks = dates.reduce((sum, d) => sum + tasksByDate[d], 0)
+      const newAvgTasks = Math.round((totalTasks / dates.length) * 10) / 10
+
+      const completedByDate: Record<string, number> = {}
+      state.tasks.forEach((t) => {
+        if (t.dueDate && t.status === "done") {
+          completedByDate[t.dueDate] = (completedByDate[t.dueDate] || 0) + 1
+        }
+      })
+
+      let newAvgRate = p.avgCompletionRate
+      if (dates.length > 0) {
+        let totalRate = 0
+        let count = 0
+        dates.forEach((d) => {
+          if (tasksByDate[d] > 0) {
+            totalRate += (completedByDate[d] || 0) / tasksByDate[d]
+            count++
+          }
+        })
+        if (count > 0) {
+          newAvgRate = totalRate / count
+        }
+      }
+
+      return {
+        patterns: {
+          ...p,
+          avgTasksPerDay: newAvgTasks,
+          avgCompletionRate: newAvgRate,
         },
       }
     })

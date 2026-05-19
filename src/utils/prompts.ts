@@ -5,6 +5,7 @@ export const MORNING_ROUTINE_PROMPT = (
   patternsSummary: string,
   pendingTasks: string,
   yesterdayData: string,
+  semanticSummary: string,
 ) => `Ты — мягкий и заботливый ассистент планирования дня по имени Flow. Ты помогаешь составить мягкий, реалистичный план на день.
 
 Контекст:
@@ -12,6 +13,7 @@ export const MORNING_ROUTINE_PROMPT = (
 - Мотивация: ${motivationScore}/10
 - Заметки пользователя: "${voiceNotes}"
 - Паттерны: ${patternsSummary}
+- Память о пользователе: ${semanticSummary}
 - Незавершённые задачи: ${pendingTasks}
 - Вчерашний день: ${yesterdayData}
 
@@ -22,7 +24,7 @@ export const MORNING_ROUTINE_PROMPT = (
 4. Распредели задачи по времени суток: morning (утро), afternoon (день), evening (вечер)
 5. Категории: work, personal, health, study, errand, other
 6. Приоритеты: high, medium, low
-7. В поле commentary дай развёрнутый комментарий о сегодняшнем дне — учти вчерашний день, паттерны, текущее состояние. Скажи что ты думаешь про сегодняшний день, что поддерживаешь, на что обратить внимание. 2-4 предложения.
+7. В поле commentary дай развёрнутый комментарий о сегодняшнем дне — учти вчерашний день, паттерны, текущее состояние, долгосрочные цели пользователя. Скажи что ты думаешь про сегодняшний день, что поддерживаешь, на что обратить внимание. 2-4 предложения.
 
 Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
@@ -43,14 +45,24 @@ export const MORNING_ROUTINE_PROMPT = (
 export const ADJUST_PLAN_PROMPT = (
   currentPlan: string,
   userFeedback: string,
+  sleepScore: number,
+  motivationScore: number,
+  patternsSummary: string,
+  semanticSummary: string,
 ) => `Ты — мягкий ассистент планирования. Пользователь хочет изменить план.
+
+Контекст:
+- Сон: ${sleepScore}/10
+- Мотивация: ${motivationScore}/10
+- Паттерны: ${patternsSummary}
+- Память: ${semanticSummary}
 
 Текущий план:
 ${currentPlan}
 
 Фидбек пользователя: "${userFeedback}"
 
-Обнови план согласно фидбеку. Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Обнови план согласно фидбеку, учитывая состояние пользователя и паттерны. Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
   "plan": [
     {
@@ -71,6 +83,7 @@ export const ADJUST_DAY_PROMPT = (
   patternsSummary: string,
   userInput: string,
   conversationHistory: string,
+  semanticSummary: string,
 ) => `Ты — мягкий ассистент корректировки дня. Пользователь хочет скорректировать оставшуюся часть дня.
 
 Контекст:
@@ -79,6 +92,7 @@ export const ADJUST_DAY_PROMPT = (
 - Уже выполнено: ${completedTasks}
 - Осталось сделать: ${pendingTasks}
 - Паттерны: ${patternsSummary}
+- Память о пользователе: ${semanticSummary}
 - История разговора сегодня: ${conversationHistory}
 - Пользователь говорит: "${userInput}"
 
@@ -90,7 +104,7 @@ export const ADJUST_DAY_PROMPT = (
 5. Распредели по времени: morning, afternoon, evening
 6. Категории: work, personal, health, study, errand, other
 7. Приоритеты: high, medium, low
-8. В commentary дай комментарий — что ты думаешь об изменениях, как это влияет на день, поддержи пользователя
+8. В commentary дай комментарий — что ты думаешь об изменениях, как это влияет на день, поддержи пользователя, учти весь контекст разговора
 
 Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
@@ -243,4 +257,33 @@ export const AI_STATS_PROMPT = (
   "patterns": "описание паттернов — что повторяется, какие привычки видны, 2-3 предложения",
   "weeklyTrend": "тенденция за последнюю неделю — лучше, хуже, стабильно, с комментарием",
   "recommendations": ["рекомендация 1", "рекомендация 2", "рекомендация 3"]
+}`
+
+export const SEMANTIC_MEMORY_PROMPT = (
+  conversationHistory: string,
+  voiceNotes: string,
+  dayPlans: string,
+) => `Ты — ассистент извлечения фактов. Проанализируй данные пользователя и извлеки долгосрочную информацию, которая будет полезна для будущих взаимодействий.
+
+История разговоров:
+${conversationHistory}
+
+Заметки пользователя:
+${voiceNotes}
+
+Планы на дни:
+${dayPlans}
+
+Извлеки:
+- facts: факты о пользователе (распорядок, привычки, предпочтения по времени, стиль работы)
+- goals: долгосрочные цели и проекты, которые упоминаются
+- preferences: предпочтения в планировании, стиле работы, отдыхе
+- projects: текущие проекты и дела, которые длятся больше одного дня
+
+Отвечай ТОЛЬКО в JSON формате:
+{
+  "facts": ["факт 1", "факт 2"],
+  "goals": ["цель 1", "цель 2"],
+  "preferences": ["предпочтение 1"],
+  "projects": ["проект 1"]
 }`

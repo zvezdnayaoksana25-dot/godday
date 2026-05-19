@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { format, subDays } from "date-fns"
 import { Sparkles, Repeat } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -36,12 +36,11 @@ const TodayPage = () => {
   const getWeekKey = useStore((s) => s.getWeekKey)
   const getLastSummarizedDay = useStore((s) => s.getLastSummarizedDay)
   const getLastSummarizedWeek = useStore((s) => s.getLastSummarizedWeek)
+  const recalcPatternsFromTasks = useStore((s) => s.recalcPatternsFromTasks)
 
   const [showMorningRoutine, setShowMorningRoutine] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
   const [showAdjustDay, setShowAdjustDay] = useState(false)
-  const morningShownRef = useRef(false)
-  const autoSummaryDoneRef = useRef(false)
 
   const today = format(new Date(), "yyyy-MM-dd")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
@@ -50,15 +49,21 @@ const TodayPage = () => {
   const hasApiKey = !!settings.groqApiKey
 
   useEffect(() => {
-    if (hasApiKey && !hasMorningRoutine(today) && !morningShownRef.current && !showMorningRoutine) {
-      morningShownRef.current = true
+    if (hasApiKey && !hasMorningRoutine(today) && !showMorningRoutine) {
       setShowMorningRoutine(true)
     }
   }, [today, hasApiKey])
 
   useEffect(() => {
-    if (!hasApiKey || autoSummaryDoneRef.current) return
-    autoSummaryDoneRef.current = true
+    recalcPatternsFromTasks()
+  }, [tasks])
+
+  useEffect(() => {
+    if (!hasApiKey) return
+
+    const summaryKey = `flowday-summary-${today}`
+    if (localStorage.getItem(summaryKey)) return
+    localStorage.setItem(summaryKey, "1")
 
     const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
     const lastSummarized = getLastSummarizedDay()
@@ -92,6 +97,10 @@ const TodayPage = () => {
     const currentWeekKey = getWeekKey(todayDate)
 
     if (isMonday && lastSummarizedWeek !== currentWeekKey) {
+      const weekStartKey = `flowday-week-summary-${currentWeekKey}`
+      if (localStorage.getItem(weekStartKey)) return
+      localStorage.setItem(weekStartKey, "1")
+
       const weekStart = new Date(todayDate)
       weekStart.setDate(todayDate.getDate() - 7)
       let dailyData = ""
@@ -114,7 +123,7 @@ const TodayPage = () => {
         saveWeeklySummary(currentWeekKey, summary)
       }).catch(() => {})
     }
-  }, [hasApiKey, today])
+  }, [hasApiKey])
 
   const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
     addTask(title, priority, category, timeBlock, false, undefined, dueDate || today)

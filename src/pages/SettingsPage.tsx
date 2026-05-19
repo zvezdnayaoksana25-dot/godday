@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2, CalendarDays, CalendarRange, Calendar } from "lucide-react"
+import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2, CalendarDays, CalendarRange, Calendar, Brain, Plus, Trash } from "lucide-react"
 import TabBar from "@/components/layout/TabBar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,45 @@ const SettingsPage = () => {
   const [testingTelegram, setTestingTelegram] = useState(false)
   const [telegramOk, setTelegramOk] = useState<boolean | null>(null)
   const [summarizing, setSummarizing] = useState<string | null>(null)
+  const [memoryTab, setMemoryTab] = useState<"facts" | "goals" | "preferences" | "projects">("facts")
+  const [newMemoryItem, setNewMemoryItem] = useState("")
+  const semanticMemory = useStore((s) => s.semanticMemory)
+  const addSemanticFact = useStore((s) => s.addSemanticFact)
+  const removeSemanticFact = useStore((s) => s.removeSemanticFact)
+  const addSemanticGoal = useStore((s) => s.addSemanticGoal)
+  const removeSemanticGoal = useStore((s) => s.removeSemanticGoal)
+  const addSemanticPreference = useStore((s) => s.addSemanticPreference)
+  const removeSemanticPreference = useStore((s) => s.removeSemanticPreference)
+  const addSemanticProject = useStore((s) => s.addSemanticProject)
+  const removeSemanticProject = useStore((s) => s.removeSemanticProject)
+
+  const handleAddMemory = () => {
+    if (!newMemoryItem.trim()) return
+    switch (memoryTab) {
+      case "facts": addSemanticFact(newMemoryItem.trim()); break
+      case "goals": addSemanticGoal(newMemoryItem.trim()); break
+      case "preferences": addSemanticPreference(newMemoryItem.trim()); break
+      case "projects": addSemanticProject(newMemoryItem.trim()); break
+    }
+    setNewMemoryItem("")
+  }
+
+  const handleRemoveMemory = (index: number) => {
+    switch (memoryTab) {
+      case "facts": removeSemanticFact(index); break
+      case "goals": removeSemanticGoal(index); break
+      case "preferences": removeSemanticPreference(index); break
+      case "projects": removeSemanticProject(index); break
+    }
+  }
+
+  const memoryItems = semanticMemory[memoryTab] || []
+  const memoryLabels: Record<string, string> = {
+    facts: "Факты",
+    goals: "Цели",
+    preferences: "Предпочтения",
+    projects: "Проекты",
+  }
 
   const handleTestKey = async () => {
     if (!settings.groqApiKey) return
@@ -400,6 +439,60 @@ const SettingsPage = () => {
                   )}
                   Саммаризировать месяц
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-primary" />
+                  Память AI
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  То, что AI знает о тебе. Эти данные используются при составлении плана и корректировке дня.
+                </p>
+                <div className="flex gap-1 bg-muted rounded-xl p-1">
+                  {(["facts", "goals", "preferences", "projects"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setMemoryTab(tab)}
+                      className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
+                        memoryTab === tab ? "bg-card shadow-sm font-medium" : "text-muted-foreground"
+                      }`}
+                    >
+                      {memoryLabels[tab]}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={`Добавить ${memoryLabels[memoryTab].toLowerCase()}...`}
+                    value={newMemoryItem}
+                    onChange={(e) => setNewMemoryItem(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddMemory()}
+                    className="h-10 text-sm"
+                  />
+                  <Button onClick={handleAddMemory} size="icon" variant="soft" className="h-10 w-10">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {memoryItems.length > 0 && (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {memoryItems.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
+                        <span className="text-sm text-foreground">{item}</span>
+                        <button
+                          onClick={() => handleRemoveMemory(i)}
+                          className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

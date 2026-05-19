@@ -10,8 +10,9 @@ import {
   WEEKLY_SUMMARY_PROMPT,
   MONTHLY_SUMMARY_PROMPT,
   AI_STATS_PROMPT,
+  SEMANTIC_MEMORY_PROMPT,
 } from "@/utils/prompts"
-import type { DayPlanTask, EveningReport, DaySummary, PeriodSummary } from "@/types"
+import type { DayPlanTask, EveningReport, DaySummary, PeriodSummary, SemanticMemory } from "@/types"
 
 const MAX_RETRIES = 2
 
@@ -32,14 +33,26 @@ async function callAI(prompt: string, maxRetries = MAX_RETRIES): Promise<string>
         ],
         temperature: 0.7,
         max_tokens: 2000,
+        response_format: { type: "json_object" },
       })
 
       const content = response.choices[0]?.message?.content
       if (!content) throw new Error("Пустой ответ от AI")
 
       return content
-    } catch (e) {
-      if (i === maxRetries - 1) throw e
+    } catch (e: any) {
+      if (i === maxRetries - 1) {
+        if (e.status === 429) {
+          throw new Error("Слишком много запросов. Подожди минуту и попробуй снова.")
+        }
+        if (e.status === 401) {
+          throw new Error("API ключ недействителен. Проверь настройки.")
+        }
+        if (e.status === 503) {
+          throw new Error("Сервер AI временно недоступен. Попробуй позже.")
+        }
+        throw e
+      }
       await new Promise((r) => setTimeout(r, 1000 * (i + 1)))
     }
   }
@@ -73,13 +86,14 @@ export async function generateMorningPlan(
   patternsSummary: string,
   pendingTasks: string,
   yesterdayData: string,
+  semanticSummary: string,
 ): Promise<{
   greeting: string
   plan: DayPlanTask[]
   commentary: string
   encouragement: string
 }> {
-  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, motivationScore, voiceNotes, patternsSummary, pendingTasks, yesterdayData)
+  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, motivationScore, voiceNotes, patternsSummary, pendingTasks, yesterdayData, semanticSummary)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ greeting: string; plan: DayPlanTask[]; commentary: string; encouragement: string }>(raw)
@@ -93,8 +107,12 @@ export async function generateMorningPlan(
 export async function adjustPlan(
   currentPlan: DayPlanTask[],
   userFeedback: string,
+  sleepScore: number,
+  motivationScore: number,
+  patternsSummary: string,
+  semanticSummary: string,
 ): Promise<DayPlanTask[]> {
-  const prompt = ADJUST_PLAN_PROMPT(JSON.stringify(currentPlan), userFeedback)
+  const prompt = ADJUST_PLAN_PROMPT(JSON.stringify(currentPlan), userFeedback, sleepScore, motivationScore, patternsSummary, semanticSummary)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ plan: DayPlanTask[] }>(raw)
@@ -151,6 +169,7 @@ export async function adjustDayPlan(
   patternsSummary: string,
   userInput: string,
   conversationHistory: string,
+  semanticSummary: string,
 ): Promise<{
   summary: string
   commentary: string
@@ -164,6 +183,7 @@ export async function adjustDayPlan(
     patternsSummary,
     userInput,
     conversationHistory,
+    semanticSummary,
   )
   const raw = await callAI(prompt)
 
@@ -308,6 +328,32 @@ export async function generateAIStats(
   }
 
   return parsed
+}
+
+export async function extractSemanticMemory(
+  conversationHistory: string,
+  voiceNotes: string,
+  dayPlans: string,
+): Promise<Partial<SemanticMemory>> {
+  const prompt = SEMANTIC_MEMORY_PROMPT(conversationHistory, voiceNotes, dayPlans)
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{
+    facts?: string[]
+    goals?: string[]
+    preferences?: string[]
+    projects?: string[]
+  }>(raw)
+  if (!parsed) {
+    return {}
+  }
+
+  return {
+    facts: parsed.facts || [],
+    goals: parsed.goals || [],
+    preferences: parsed.preferences || [],
+    projects: parsed.projects || [],
+  }
 }
 
 export async function testGroqKey(apiKey: string): Promise<boolean> {
