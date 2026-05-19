@@ -33,6 +33,16 @@ export const useStore = create<StoreState>()(
           const p = persistedState.state.patterns
           if (!p.energyHistory) p.energyHistory = []
           if (!p.avgSleepDuration) p.avgSleepDuration = 8
+          if (!p.motivationHistory) p.motivationHistory = []
+          if (!p.sleepHistory) p.sleepHistory = []
+          if (!p.frequentlyPostponedCategories) p.frequentlyPostponedCategories = []
+        }
+        if (version === 0 && persistedState?.state?.semanticMemory) {
+          const sm = persistedState.state.semanticMemory
+          if (!sm.facts) sm.facts = []
+          if (!sm.goals) sm.goals = []
+          if (!sm.preferences) sm.preferences = []
+          if (!sm.projects) sm.projects = []
         }
         return persistedState
       },

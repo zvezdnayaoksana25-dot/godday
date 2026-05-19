@@ -68,7 +68,7 @@ const SettingsPage = () => {
     }
   }
 
-  const memoryItems = semanticMemory[memoryTab] || []
+  const memoryItems = semanticMemory?.[memoryTab] || []
   const memoryLabels: Record<string, string> = {
     facts: "Факты",
     goals: "Цели",

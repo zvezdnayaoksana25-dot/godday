@@ -47,13 +47,17 @@ const StatsPage = () => {
   const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0
   const totalDays = Object.keys(dayPlans).length
 
+  const motivationHistory = patterns.motivationHistory || []
+  const sleepHistory = patterns.sleepHistory || []
+  const energyHistory = patterns.energyHistory || []
+
   const avgMotivation =
-    patterns.motivationHistory.length > 0
-      ? patterns.motivationHistory.reduce((sum, m) => sum + m.score, 0) / patterns.motivationHistory.length
+    motivationHistory.length > 0
+      ? motivationHistory.reduce((sum, m) => sum + m.score, 0) / motivationHistory.length
       : 0
   const avgSleep =
-    patterns.sleepHistory.length > 0
-      ? patterns.sleepHistory.reduce((sum, s) => sum + s.score, 0) / patterns.sleepHistory.length
+    sleepHistory.length > 0
+      ? sleepHistory.reduce((sum, s) => sum + s.score, 0) / sleepHistory.length
       : 0
 
   const categoryStats: Record<string, { total: number; completed: number }> = {}
@@ -344,12 +348,12 @@ const StatsPage = () => {
             </Card>
           )}
 
-          {patterns.motivationHistory.length > 0 && (
+          {motivationHistory.length > 0 && (
             <Card className="p-4 mb-6">
               <h3 className="text-sm font-medium mb-3">Мотивация и сон (последние записи)</h3>
               <div className="space-y-2">
-                {patterns.motivationHistory.slice(-7).map((m, i) => {
-                  const sleep = patterns.sleepHistory[i]
+                {motivationHistory.slice(-7).map((m, i) => {
+                  const sleep = sleepHistory[i]
                   return (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{m.date}</span>

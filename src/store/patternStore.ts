@@ -38,16 +38,20 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
     set((state) => {
       const p = state.patterns
       const today = format(new Date(), "yyyy-MM-dd")
+      const motivationHistory = p.motivationHistory || []
+      const sleepHistory = p.sleepHistory || []
+      const energyHistory = p.energyHistory || []
+      const frequentlyPostponedCategories = p.frequentlyPostponedCategories || []
       const duration = calcSleepDuration(sleepTime, wakeTime)
-      const newMotivation = [...p.motivationHistory, { date: today, score: motivationScore }].slice(-30)
-      const newSleep = [...p.sleepHistory, { date: today, score: sleepScore, duration, sleepTime, wakeTime }].slice(-30)
-      const newEnergy = [...p.energyHistory, { date: today, level: energyLevel }].slice(-30)
+      const newMotivation = [...motivationHistory, { date: today, score: motivationScore }].slice(-30)
+      const newSleep = [...sleepHistory, { date: today, score: sleepScore, duration, sleepTime, wakeTime }].slice(-30)
+      const newEnergy = [...energyHistory, { date: today, level: energyLevel }].slice(-30)
 
       const completionRate = tasksTotal > 0 ? tasksCompleted / tasksTotal : 0
       const newAvgRate = p.avgCompletionRate * 0.7 + completionRate * 0.3
 
       const oldAvgDuration = p.avgSleepDuration
-      const newAvgDuration = p.sleepHistory.length > 0
+      const newAvgDuration = sleepHistory.length > 0
         ? oldAvgDuration * 0.7 + duration * 0.3
         : duration
 
@@ -59,7 +63,7 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
         .filter(([, count]) => count >= 2)
         .map(([cat]) => cat as Category)
 
-      const allDays = new Set([...p.motivationHistory.map((m) => m.date), ...p.sleepHistory.map((s) => s.date), today])
+      const allDays = new Set([...motivationHistory.map((m) => m.date), ...sleepHistory.map((s) => s.date), today])
       const totalTasksAllTime = state.tasks.reduce((sum, t) => {
         if (allDays.has(t.dueDate || "")) return sum + 1
         return sum
@@ -131,28 +135,33 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
 
   getPatternsSummary: () => {
     const p = get().patterns
+    const motivationHistory = p.motivationHistory || []
+    const sleepHistory = p.sleepHistory || []
+    const energyHistory = p.energyHistory || []
+    const frequentlyPostponedCategories = p.frequentlyPostponedCategories || []
+
     const avgMotivation =
-      p.motivationHistory.length > 0
-        ? p.motivationHistory.reduce((sum, m) => sum + m.score, 0) / p.motivationHistory.length
+      motivationHistory.length > 0
+        ? motivationHistory.reduce((sum, m) => sum + m.score, 0) / motivationHistory.length
         : 5
     const avgSleep =
-      p.sleepHistory.length > 0
-        ? p.sleepHistory.reduce((sum, s) => sum + s.score, 0) / p.sleepHistory.length
+      sleepHistory.length > 0
+        ? sleepHistory.reduce((sum, s) => sum + s.score, 0) / sleepHistory.length
         : 5
     const avgDuration =
-      p.sleepHistory.length > 0
-        ? p.sleepHistory.reduce((sum, s) => sum + s.duration, 0) / p.sleepHistory.length
+      sleepHistory.length > 0
+        ? sleepHistory.reduce((sum, s) => sum + s.duration, 0) / sleepHistory.length
         : p.avgSleepDuration
 
     const energyCounts = { low: 0, medium: 0, high: 0 }
-    p.energyHistory.forEach((e) => { energyCounts[e.level]++ })
-    const totalEnergy = p.energyHistory.length || 1
+    energyHistory.forEach((e) => { energyCounts[e.level]++ })
+    const totalEnergy = energyHistory.length || 1
     const energySummary = energyCounts.high > energyCounts.low
       ? "чаще полна энергии"
       : energyCounts.low > energyCounts.high
         ? "чаще чувствуешь разбитость"
         : "энергия обычно в норме"
 
-    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(p.avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${p.avgTasksPerDay} задач в день. Часто переносимые категории: ${p.frequentlyPostponedCategories.join(", ") || "нет"}.`
+    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(p.avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${p.avgTasksPerDay} задач в день. Часто переносимые категории: ${frequentlyPostponedCategories.join(", ") || "нет"}.`
   },
 })
