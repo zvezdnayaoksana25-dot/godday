@@ -120,3 +120,11 @@ export interface SemanticMemory {
   projects: string[]
   lastUpdated: string
 }
+
+export interface DiaryEntry {
+  id: string
+  date: string
+  content: string
+  mood?: number
+  createdAt: string
+}

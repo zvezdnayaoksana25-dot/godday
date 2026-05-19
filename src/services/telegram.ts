@@ -1,4 +1,6 @@
 import { useStore } from "@/store/useStore"
+import { format } from "date-fns"
+import type { DiaryEntry } from "@/types"
 
 export async function sendTelegramMessage(text: string): Promise<boolean> {
   const { telegramBotToken, telegramChatId } = useStore.getState().settings
@@ -46,4 +48,26 @@ export async function sendEveningReport(report: string): Promise<void> {
 
 export async function testTelegramConnection(): Promise<boolean> {
   return sendTelegramMessage("✨ FlowDay подключён! Всё работает.")
+}
+
+const moodEmojis: Record<number, string> = {
+  1: "😔",
+  2: "😕",
+  3: "😐",
+  4: "🙂",
+  5: "😊",
+}
+
+export async function sendDiaryEntryToBackup(entry: DiaryEntry): Promise<void> {
+  const hasConfig = !!(
+    useStore.getState().settings.telegramBotToken &&
+    useStore.getState().settings.telegramChatId
+  )
+  if (!hasConfig) return
+
+  const date = format(new Date(entry.createdAt), "dd MMMM, HH:mm")
+  const mood = entry.mood ? `${moodEmojis[entry.mood] || ""} ` : ""
+  const text = `📓 <b>Дневник — ${date}</b>\n${mood}\n${entry.content}`
+
+  await sendTelegramMessage(text)
 }

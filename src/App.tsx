@@ -6,6 +6,7 @@ import TodayPage from "./pages/TodayPage"
 import CalendarPage from "./pages/CalendarPage"
 import SettingsPage from "./pages/SettingsPage"
 import StatsPage from "./pages/StatsPage"
+import DiaryPage from "./pages/DiaryPage"
 
 const App = () => {
   const theme = useStore((s) => s.settings.theme)
@@ -26,6 +27,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<TodayPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/diary" element={<DiaryPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>

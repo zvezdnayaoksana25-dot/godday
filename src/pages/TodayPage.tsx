@@ -37,6 +37,7 @@ const TodayPage = () => {
   const getLastSummarizedDay = useStore((s) => s.getLastSummarizedDay)
   const getLastSummarizedWeek = useStore((s) => s.getLastSummarizedWeek)
   const recalcPatternsFromTasks = useStore((s) => s.recalcPatternsFromTasks)
+  const getDiaryEntriesForPeriod = useStore((s) => s.getDiaryEntriesForPeriod)
 
   const [showMorningRoutine, setShowMorningRoutine] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
@@ -86,6 +87,7 @@ const TodayPage = () => {
         pending.map((t) => t.title).join(", "),
         manual.map((t) => t.title).join(", "),
         getPatternsSummary(),
+        getDiaryEntriesForPeriod(yesterday),
       ).then((summary) => {
         saveDailySummary(yesterday, summary)
       }).catch(() => {})
@@ -114,11 +116,25 @@ const TodayPage = () => {
         dailyData += `${format(d, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10` : ""}\n`
       }
 
+      const weekStartStr = format(weekStart, "yyyy-MM-dd")
+      const weekEndStr = format(todayDate, "yyyy-MM-dd")
+      let diaryEntries = ""
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart)
+        d.setDate(weekStart.getDate() + i)
+        const dateStr = format(d, "yyyy-MM-dd")
+        const entries = getDiaryEntriesForPeriod(dateStr)
+        if (entries !== "нет записей в дневнике") {
+          diaryEntries += `${dateStr}: ${entries}\n\n`
+        }
+      }
+
       generateWeeklySummary(
         format(weekStart, "dd.MM.yyyy"),
         format(todayDate, "dd.MM.yyyy"),
         dailyData,
         getPatternsSummary(),
+        diaryEntries,
       ).then((summary) => {
         saveWeeklySummary(currentWeekKey, summary)
       }).catch(() => {})

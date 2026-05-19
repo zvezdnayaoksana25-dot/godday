@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Home, Calendar, BarChart3, Settings, Plus } from "lucide-react"
+import { Home, Calendar, BookOpen, Settings, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const TabBar = ({ onAddTask }: { onAddTask: () => void }) => {
@@ -10,7 +10,7 @@ const TabBar = ({ onAddTask }: { onAddTask: () => void }) => {
   const tabs = [
     { path: "/", icon: Home, label: "Сегодня" },
     { path: "/calendar", icon: Calendar, label: "Календарь" },
-    { path: "/stats", icon: BarChart3, label: "Статистика" },
+    { path: "/diary", icon: BookOpen, label: "Дневник" },
     { path: "/settings", icon: Settings, label: "Настройки" },
   ]
 

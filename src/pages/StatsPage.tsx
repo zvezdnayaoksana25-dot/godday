@@ -35,6 +35,7 @@ const StatsPage = () => {
   const dailySummaries = useStore((s) => s.dailySummaries)
   const aiStats = useStore((s) => s.aiStats)
   const saveAIStats = useStore((s) => s.saveAIStats)
+  const getDiaryEntriesForPeriod = useStore((s) => s.getDiaryEntriesForPeriod)
 
   const [isLoading, setIsLoading] = useState(false)
   const [statsError, setStatsError] = useState<string | null>(null)
@@ -95,6 +96,13 @@ const StatsPage = () => {
     setIsLoading(true)
     setStatsError(null)
     try {
+      const diaryEntriesStr = Object.entries(dailySummaries)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .slice(0, 7)
+        .map(([date]) => getDiaryEntriesForPeriod(date))
+        .filter((e) => e !== "нет записей в дневнике")
+        .join(". ") || "нет"
+
       const result = await generateAIStats(
         totalTasks,
         completedTasks,
@@ -105,6 +113,7 @@ const StatsPage = () => {
         categoryStatsStr,
         getPatternsSummary(),
         recentSummariesStr,
+        diaryEntriesStr,
       )
       saveAIStats(JSON.stringify(result))
     } catch (e: any) {

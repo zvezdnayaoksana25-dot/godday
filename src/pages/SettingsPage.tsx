@@ -27,6 +27,7 @@ const SettingsPage = () => {
   const saveMonthlySummary = useStore((s) => s.saveMonthlySummary)
   const getWeekKey = useStore((s) => s.getWeekKey)
   const getMonthKey = useStore((s) => s.getMonthKey)
+  const getDiaryEntriesForPeriod = useStore((s) => s.getDiaryEntriesForPeriod)
 
   const [showApiKey, setShowApiKey] = useState(false)
   const [showBotToken, setShowBotToken] = useState(false)
@@ -153,6 +154,7 @@ const SettingsPage = () => {
         pending.map((t) => t.title).join(", "),
         manual.map((t) => t.title).join(", "),
         getPatternsSummary(),
+        getDiaryEntriesForPeriod(today),
       )
 
       saveDailySummary(today, summary)
@@ -177,12 +179,17 @@ const SettingsPage = () => {
       const days = eachDayOfInterval({ start: weekStart, end: weekEnd })
 
       let dailyData = ""
+      let diaryEntries = ""
       for (const day of days) {
         const dateStr = format(day, "yyyy-MM-dd")
         const plan = dayPlans[dateStr]
         const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
         const completed = dayTasks.filter((t) => t.status === "done").length
         dailyData += `${format(day, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, мотивация ${plan.motivationScore}/10` : ""}\n`
+        const entries = getDiaryEntriesForPeriod(dateStr)
+        if (entries !== "нет записей в дневнике") {
+          diaryEntries += `${dateStr}: ${entries}\n\n`
+        }
       }
 
       const summary = await generateWeeklySummary(
@@ -190,6 +197,7 @@ const SettingsPage = () => {
         format(weekEnd, "dd.MM.yyyy"),
         dailyData,
         getPatternsSummary(),
+        diaryEntries,
       )
 
       const weekKey = getWeekKey(now)

@@ -206,6 +206,7 @@ export async function generateDailySummary(
   postponedTaskNames: string,
   manuallyAddedTasks: string,
   patternsSummary: string,
+  diaryEntries: string,
 ): Promise<DaySummary> {
   const prompt = DAILY_SUMMARY_PROMPT(
     date,
@@ -218,6 +219,7 @@ export async function generateDailySummary(
     postponedTaskNames,
     manuallyAddedTasks,
     patternsSummary,
+    diaryEntries,
   )
   const raw = await callAI(prompt)
 
@@ -240,8 +242,9 @@ export async function generateWeeklySummary(
   weekEnd: string,
   dailyData: string,
   patternsSummary: string,
+  diaryEntries: string,
 ): Promise<PeriodSummary> {
-  const prompt = WEEKLY_SUMMARY_PROMPT(weekStart, weekEnd, dailyData, patternsSummary)
+  const prompt = WEEKLY_SUMMARY_PROMPT(weekStart, weekEnd, dailyData, patternsSummary, diaryEntries)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ summary: string; insights: string[]; patterns: string }>(raw)
@@ -288,6 +291,7 @@ export async function generateAIStats(
   categoryStats: string,
   patternsSummary: string,
   recentDailySummaries: string,
+  diaryEntries: string,
 ): Promise<{
   completionRate: number
   streakDays: number
@@ -309,6 +313,7 @@ export async function generateAIStats(
     categoryStats,
     patternsSummary,
     recentDailySummaries,
+    diaryEntries,
   )
   const raw = await callAI(prompt)
 

@@ -167,6 +167,7 @@ export const DAILY_SUMMARY_PROMPT = (
   postponedTaskNames: string,
   manuallyAddedTasks: string,
   patternsSummary: string,
+  diaryEntries: string,
 ) => `Ты — мягкий ассистент. Сделай саммаризацию дня.
 
 Дата: ${date}
@@ -179,6 +180,7 @@ export const DAILY_SUMMARY_PROMPT = (
 Перенесённые задачи: ${postponedTaskNames || "нет"}
 Задачи добавленные вручную: ${manuallyAddedTasks || "нет"}
 Паттерны: ${patternsSummary}
+Записи из дневника: ${diaryEntries || "нет"}
 
 Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
@@ -191,12 +193,15 @@ export const WEEKLY_SUMMARY_PROMPT = (
   weekEnd: string,
   dailyData: string,
   patternsSummary: string,
+  diaryEntries: string,
 ) => `Ты — мягкий ассистент. Сделай саммаризацию недели.
 
 Неделя: ${weekStart} — ${weekEnd}
 Данные по дням:
 ${dailyData}
 Паттерны: ${patternsSummary}
+Записи из дневника за неделю:
+${diaryEntries || "нет"}
 
 Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
@@ -233,6 +238,7 @@ export const AI_STATS_PROMPT = (
   categoryStats: string,
   patternsSummary: string,
   recentDailySummaries: string,
+  diaryEntries: string,
 ) => `Ты — мягкий ассистент аналитики. Проанализируй статистику пользователя и сделай красивый разбор.
 
 Общие данные:
@@ -245,6 +251,7 @@ export const AI_STATS_PROMPT = (
 - По категориям: ${categoryStats}
 - Паттерны: ${patternsSummary}
 - Последние саммаризации дней: ${recentDailySummaries || "нет"}
+- Записи из дневника: ${diaryEntries || "нет"}
 
 Ответь ТОЛЬКО в JSON формате без markdown обёртки:
 {
