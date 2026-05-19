@@ -9,6 +9,7 @@ const defaultSession: MorningSession = {
   voiceNotes: "",
   aiPlan: [],
   aiGreeting: "",
+  aiCommentary: "",
   aiEncouragement: "",
   isLoading: false,
   error: null,
@@ -20,7 +21,7 @@ export interface AIStore {
   setSleepScore: (score: number) => void
   setMotivationScore: (score: number) => void
   setVoiceNotes: (notes: string) => void
-  setAIPlan: (plan: DayPlanTask[], greeting: string, encouragement: string) => void
+  setAIPlan: (plan: DayPlanTask[], greeting: string, commentary: string, encouragement: string) => void
   setAILoading: (loading: boolean) => void
   setAIError: (error: string | null) => void
   resetMorningSession: () => void
@@ -53,12 +54,13 @@ export const createAIStore: StateCreator<StoreState, [], [], AIStore> = (set) =>
     }))
   },
 
-  setAIPlan: (plan, greeting, encouragement) => {
+  setAIPlan: (plan, greeting, commentary, encouragement) => {
     set((state) => ({
       morningSession: {
         ...state.morningSession,
         aiPlan: plan,
         aiGreeting: greeting,
+        aiCommentary: commentary,
         aiEncouragement: encouragement,
       },
     }))

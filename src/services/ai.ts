@@ -6,8 +6,12 @@ import {
   EVENING_REPORT_PROMPT,
   PARSE_VOICE_PROMPT,
   ADJUST_DAY_PROMPT,
+  DAILY_SUMMARY_PROMPT,
+  WEEKLY_SUMMARY_PROMPT,
+  MONTHLY_SUMMARY_PROMPT,
+  AI_STATS_PROMPT,
 } from "@/utils/prompts"
-import type { DayPlanTask, EveningReport } from "@/types"
+import type { DayPlanTask, EveningReport, DaySummary, PeriodSummary } from "@/types"
 
 const MAX_RETRIES = 2
 
@@ -68,15 +72,17 @@ export async function generateMorningPlan(
   voiceNotes: string,
   patternsSummary: string,
   pendingTasks: string,
+  yesterdayData: string,
 ): Promise<{
   greeting: string
   plan: DayPlanTask[]
+  commentary: string
   encouragement: string
 }> {
-  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, motivationScore, voiceNotes, patternsSummary, pendingTasks)
+  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, motivationScore, voiceNotes, patternsSummary, pendingTasks, yesterdayData)
   const raw = await callAI(prompt)
 
-  const parsed = validateJSON<{ greeting: string; plan: DayPlanTask[]; encouragement: string }>(raw)
+  const parsed = validateJSON<{ greeting: string; plan: DayPlanTask[]; commentary: string; encouragement: string }>(raw)
   if (!parsed || !parsed.plan || !Array.isArray(parsed.plan)) {
     throw new Error("AI вернул некорректный формат")
   }
@@ -144,8 +150,10 @@ export async function adjustDayPlan(
   pendingTasks: string,
   patternsSummary: string,
   userInput: string,
+  conversationHistory: string,
 ): Promise<{
   summary: string
+  commentary: string
   newTasks: DayPlanTask[]
 }> {
   const prompt = ADJUST_DAY_PROMPT(
@@ -155,11 +163,147 @@ export async function adjustDayPlan(
     pendingTasks,
     patternsSummary,
     userInput,
+    conversationHistory,
   )
   const raw = await callAI(prompt)
 
-  const parsed = validateJSON<{ summary: string; newTasks: DayPlanTask[] }>(raw)
+  const parsed = validateJSON<{ summary: string; commentary: string; newTasks: DayPlanTask[] }>(raw)
   if (!parsed || !parsed.newTasks || !Array.isArray(parsed.newTasks)) {
+    throw new Error("AI вернул некорректный формат")
+  }
+
+  return parsed
+}
+
+export async function generateDailySummary(
+  date: string,
+  tasksPlanned: number,
+  tasksCompleted: number,
+  sleepScore: number,
+  motivationScore: number,
+  voiceNotes: string,
+  completedTaskNames: string,
+  postponedTaskNames: string,
+  manuallyAddedTasks: string,
+  patternsSummary: string,
+): Promise<DaySummary> {
+  const prompt = DAILY_SUMMARY_PROMPT(
+    date,
+    tasksPlanned,
+    tasksCompleted,
+    sleepScore,
+    motivationScore,
+    voiceNotes,
+    completedTaskNames,
+    postponedTaskNames,
+    manuallyAddedTasks,
+    patternsSummary,
+  )
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{ summary: string; mood: string }>(raw)
+  if (!parsed || !parsed.summary) {
+    throw new Error("AI вернул некорректный формат")
+  }
+
+  return {
+    date,
+    summary: parsed.summary,
+    tasksPlanned,
+    tasksCompleted,
+    mood: parsed.mood,
+  }
+}
+
+export async function generateWeeklySummary(
+  weekStart: string,
+  weekEnd: string,
+  dailyData: string,
+  patternsSummary: string,
+): Promise<PeriodSummary> {
+  const prompt = WEEKLY_SUMMARY_PROMPT(weekStart, weekEnd, dailyData, patternsSummary)
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{ summary: string; insights: string[]; patterns: string }>(raw)
+  if (!parsed || !parsed.summary) {
+    throw new Error("AI вернул некорректный формат")
+  }
+
+  return {
+    period: `${weekStart} — ${weekEnd}`,
+    summary: parsed.summary,
+    insights: parsed.insights || [],
+    patterns: parsed.patterns || "",
+  }
+}
+
+export async function generateMonthlySummary(
+  month: string,
+  weeklyData: string,
+  patternsSummary: string,
+): Promise<PeriodSummary> {
+  const prompt = MONTHLY_SUMMARY_PROMPT(month, weeklyData, patternsSummary)
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{ summary: string; insights: string[]; patterns: string }>(raw)
+  if (!parsed || !parsed.summary) {
+    throw new Error("AI вернул некорректный формат")
+  }
+
+  return {
+    period: month,
+    summary: parsed.summary,
+    insights: parsed.insights || [],
+    patterns: parsed.patterns || "",
+  }
+}
+
+export async function generateAIStats(
+  totalTasks: number,
+  completedTasks: number,
+  totalDays: number,
+  completionRate: number,
+  avgMotivation: number,
+  avgSleep: number,
+  categoryStats: string,
+  patternsSummary: string,
+  recentDailySummaries: string,
+): Promise<{
+  completionRate: number
+  streakDays: number
+  avgTasksPerDay: number
+  bestDay: string
+  bestCategory: string
+  insight: string
+  patterns: string
+  weeklyTrend: string
+  recommendations: string[]
+}> {
+  const prompt = AI_STATS_PROMPT(
+    totalTasks,
+    completedTasks,
+    totalDays,
+    completionRate,
+    avgMotivation,
+    avgSleep,
+    categoryStats,
+    patternsSummary,
+    recentDailySummaries,
+  )
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<{
+    completionRate: number
+    streakDays: number
+    avgTasksPerDay: number
+    bestDay: string
+    bestCategory: string
+    insight: string
+    patterns: string
+    weeklyTrend: string
+    recommendations: string[]
+  }>(raw)
+  if (!parsed || !parsed.insight) {
     throw new Error("AI вернул некорректный формат")
   }
 

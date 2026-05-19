@@ -5,9 +5,10 @@ import { createDayStore, type DayStore } from "./dayStore"
 import { createPatternStore, type PatternStore } from "./patternStore"
 import { createSettingsStore, type SettingsStore } from "./settingsStore"
 import { createAIStore, type AIStore } from "./aiStore"
+import { createSummaryStore, type SummaryStore } from "./summaryStore"
 import { indexedDBStorage } from "@/lib/storage"
 
-export type StoreState = TaskStore & DayStore & PatternStore & SettingsStore & AIStore
+export type StoreState = TaskStore & DayStore & PatternStore & SettingsStore & AIStore & SummaryStore
 
 export const useStore = create<StoreState>()(
   persist(
@@ -17,6 +18,7 @@ export const useStore = create<StoreState>()(
       ...createPatternStore(set, get, api),
       ...createSettingsStore(set, get, api),
       ...createAIStore(set, get, api),
+      ...createSummaryStore(set, get, api),
     }),
     {
       name: "flowday-data",

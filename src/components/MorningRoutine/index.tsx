@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react"
 import { motion } from "framer-motion"
-import { format } from "date-fns"
+import { format, subDays } from "date-fns"
 import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,7 +10,7 @@ import { useStore } from "@/store/useStore"
 import { generateMorningPlan, adjustPlan } from "@/services/ai"
 import { sendMorningPlan } from "@/services/telegram"
 import { startSpeechRecognition, isSpeechSupported } from "@/services/speech"
-import type { DayPlanTask, MorningSession, Task } from "@/types"
+import type { DayPlanTask, MorningSession, Task, AIConversationMessage } from "@/types"
 import { v4 as uuidv4 } from "uuid"
 
 const timeBlockLabels: Record<string, string> = {
@@ -51,12 +51,24 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const getTodayTasks = useStore((s) => s.getTodayTasks)
   const recordDayData = useStore((s) => s.recordDayData)
   const patterns = useStore((s) => s.patterns)
+  const addConversationMessage = useStore((s) => s.addConversationMessage)
+  const getDayPlan = useStore((s) => s.getDayPlan)
+  const tasks = useStore((s) => s.tasks)
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
   const [adjustInput, setAdjustInput] = useState("")
   const [isAdjusting, setIsAdjusting] = useState(false)
   const isCompleting = useRef(false)
+
+  const today = format(new Date(), "yyyy-MM-dd")
+  const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
+  const yesterdayPlan = getDayPlan(yesterday)
+  const yesterdayTasks = tasks.filter((t) => t.dueDate === yesterday)
+  const yesterdayCompleted = yesterdayTasks.filter((t) => t.status === "done")
+  const yesterdayData = yesterdayPlan
+    ? `Был план. Выполнено: ${yesterdayCompleted.length}/${yesterdayTasks.length}. Заметки: "${yesterdayPlan.voiceNotes || "нет"}"`
+    : "Плана не было"
 
   const handleNext = useCallback(() => {
     const stepOrder: MorningSession["step"][] = ["sleep", "motivation", "voice", "plan", "done"]
@@ -90,10 +102,24 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         voiceInput || morningSession.voiceNotes,
         getPatternsSummary(),
         pendingTasks,
+        yesterdayData,
       )
 
+      const userMsg: AIConversationMessage = {
+        role: "user",
+        content: voiceInput || morningSession.voiceNotes,
+        timestamp: new Date().toISOString(),
+      }
+      const aiMsg: AIConversationMessage = {
+        role: "assistant",
+        content: `${result.greeting}\n\nПлан:\n${result.plan.map((t) => `- ${t.title}`).join("\n")}\n\n${result.commentary}`,
+        timestamp: new Date().toISOString(),
+      }
+      addConversationMessage(today, userMsg)
+      addConversationMessage(today, aiMsg)
+
       setVoiceNotes(voiceInput)
-      setAIPlan(result.plan, result.greeting, result.encouragement)
+      setAIPlan(result.plan, result.greeting, result.commentary, result.encouragement)
       setMorningStep("plan")
     } catch (e: any) {
       setAIError(e.message || "Ошибка при генерации плана")
@@ -105,8 +131,6 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const handleAcceptPlan = async () => {
     if (isCompleting.current) return
     isCompleting.current = true
-
-    const today = format(new Date(), "yyyy-MM-dd")
 
     const newTasks: Task[] = morningSession.aiPlan.map((task: DayPlanTask, i: number) => ({
       id: uuidv4(),
@@ -131,8 +155,10 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       motivationScore: morningSession.motivationScore,
       voiceNotes: voiceInput,
       aiSummary: morningSession.aiGreeting,
+      aiCommentary: morningSession.aiCommentary,
       completed: false,
       originalPlan: morningSession.aiPlan,
+      conversationHistory: [],
     }
     saveDayPlan(plan)
 
@@ -162,7 +188,21 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     setIsAdjusting(true)
     try {
       const newPlan = await adjustPlan(morningSession.aiPlan, adjustInput)
-      setAIPlan(newPlan, morningSession.aiGreeting, morningSession.aiEncouragement)
+      setAIPlan(newPlan, morningSession.aiGreeting, morningSession.aiCommentary, morningSession.aiEncouragement)
+
+      const userMsg: AIConversationMessage = {
+        role: "user",
+        content: `Корректировка: ${adjustInput}`,
+        timestamp: new Date().toISOString(),
+      }
+      const aiMsg: AIConversationMessage = {
+        role: "assistant",
+        content: `Обновлённый план:\n${newPlan.map((t) => `- ${t.title}`).join("\n")}`,
+        timestamp: new Date().toISOString(),
+      }
+      addConversationMessage(today, userMsg)
+      addConversationMessage(today, aiMsg)
+
       setAdjustInput("")
     } catch (e: any) {
       setAIError(e.message || "Ошибка при корректировке")
@@ -339,8 +379,16 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         return (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold">{morningSession.aiGreeting || "Вот план на день ✨"}</h2>
+              <h2 className="text-2xl font-semibold">{morningSession.aiGreeting || "Вот план на день"}</h2>
             </div>
+
+            {morningSession.aiCommentary && (
+              <Card className="p-4 bg-secondary/30 border-secondary/50">
+                <p className="text-sm text-muted-foreground leading-relaxed italic">
+                  {morningSession.aiCommentary}
+                </p>
+              </Card>
+            )}
 
             <div className="space-y-3">
               {morningSession.aiPlan.map((task: DayPlanTask, i: number) => (

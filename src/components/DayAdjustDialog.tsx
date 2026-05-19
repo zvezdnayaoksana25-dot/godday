@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
 import { adjustDayPlan } from "@/services/ai"
-import type { DayPlanTask, Task } from "@/types"
+import type { DayPlanTask, Task, AIConversationMessage } from "@/types"
 
 interface DayAdjustDialogProps {
   open: boolean
@@ -40,6 +40,8 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const getPatternsSummary = useStore((s) => s.getPatternsSummary)
   const deleteTask = useStore((s) => s.deleteTask)
   const addTasks = useStore((s) => s.addTasks)
+  const getConversationHistory = useStore((s) => s.getConversationHistory)
+  const addConversationMessage = useStore((s) => s.addConversationMessage)
 
   const today = new Date().toLocaleDateString("en-CA")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
@@ -50,7 +52,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const [userInput, setUserInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ summary: string; newTasks: DayPlanTask[] } | null>(null)
+  const [result, setResult] = useState<{ summary: string; commentary: string; newTasks: DayPlanTask[] } | null>(null)
 
   const handleAdjust = async () => {
     if (!userInput.trim()) return
@@ -68,6 +70,13 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
         ? JSON.stringify(dayPlan.originalPlan)
         : JSON.stringify(todayTasks.map((t) => ({ title: t.title, priority: t.priority, category: t.category, suggestedTime: t.timeBlock })))
 
+      const conversationHistory = getConversationHistory(today)
+      const conversationStr = conversationHistory.length > 0
+        ? conversationHistory
+            .map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`)
+            .join("\n\n")
+        : "нет"
+
       const adjusted = await adjustDayPlan(
         currentTime,
         JSON.parse(originalPlanStr),
@@ -75,7 +84,21 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
         pendingStr,
         getPatternsSummary(),
         userInput,
+        conversationStr,
       )
+
+      const userMsg: AIConversationMessage = {
+        role: "user",
+        content: `Корректировка дня: ${userInput}`,
+        timestamp: new Date().toISOString(),
+      }
+      const aiMsg: AIConversationMessage = {
+        role: "assistant",
+        content: `${adjusted.summary}\n\nНовый план:\n${adjusted.newTasks.map((t) => `- ${t.title}`).join("\n")}\n\n${adjusted.commentary}`,
+        timestamp: new Date().toISOString(),
+      }
+      addConversationMessage(today, userMsg)
+      addConversationMessage(today, aiMsg)
 
       setResult(adjusted)
     } catch (e: any) {
@@ -113,6 +136,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
       saveDayPlan({
         ...dayPlan,
         originalPlan: result.newTasks,
+        aiCommentary: result.commentary,
       })
     }
 
@@ -208,6 +232,14 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
           {result && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground italic">{result.summary}</p>
+
+              {result.commentary && (
+                <Card className="p-4 bg-secondary/30 border-secondary/50">
+                  <p className="text-sm text-muted-foreground leading-relaxed italic">
+                    {result.commentary}
+                  </p>
+                </Card>
+              )}
 
               <div className="space-y-2">
                 {result.newTasks.map((task, i) => (

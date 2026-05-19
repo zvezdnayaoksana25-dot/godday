@@ -1,7 +1,7 @@
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2 } from "lucide-react"
+import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2, CalendarDays, CalendarRange, Calendar } from "lucide-react"
 import TabBar from "@/components/layout/TabBar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,21 @@ import { testGroqKey } from "@/services/ai"
 import { testTelegramConnection } from "@/services/telegram"
 import { exportData, importData, clearAllData } from "@/lib/storage"
 import { resetGroqClient } from "@/services/groq"
+import { generateDailySummary, generateWeeklySummary, generateMonthlySummary } from "@/services/ai"
+import { toast } from "sonner"
 
 const SettingsPage = () => {
   const navigate = useNavigate()
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
+  const tasks = useStore((s) => s.tasks)
+  const dayPlans = useStore((s) => s.dayPlans)
+  const getPatternsSummary = useStore((s) => s.getPatternsSummary)
+  const saveDailySummary = useStore((s) => s.saveDailySummary)
+  const saveWeeklySummary = useStore((s) => s.saveWeeklySummary)
+  const saveMonthlySummary = useStore((s) => s.saveMonthlySummary)
+  const getWeekKey = useStore((s) => s.getWeekKey)
+  const getMonthKey = useStore((s) => s.getMonthKey)
 
   const [showApiKey, setShowApiKey] = useState(false)
   const [showBotToken, setShowBotToken] = useState(false)
@@ -24,6 +34,7 @@ const SettingsPage = () => {
   const [keyValid, setKeyValid] = useState<boolean | null>(null)
   const [testingTelegram, setTestingTelegram] = useState(false)
   const [telegramOk, setTelegramOk] = useState<boolean | null>(null)
+  const [summarizing, setSummarizing] = useState<string | null>(null)
 
   const handleTestKey = async () => {
     if (!settings.groqApiKey) return
@@ -78,6 +89,131 @@ const SettingsPage = () => {
     }
   }
 
+  const handleDailySummary = async () => {
+    if (!settings.groqApiKey) {
+      toast.error("Нужен Groq API ключ")
+      return
+    }
+    setSummarizing("daily")
+    try {
+      const today = format(new Date(), "yyyy-MM-dd")
+      const dayPlan = dayPlans[today]
+      const dayTasks = tasks.filter((t) => t.dueDate === today)
+      const completed = dayTasks.filter((t) => t.status === "done")
+      const pending = dayTasks.filter((t) => t.status !== "done")
+      const manual = dayTasks.filter((t) => !t.aiGenerated)
+
+      const summary = await generateDailySummary(
+        today,
+        dayTasks.length,
+        completed.length,
+        dayPlan?.sleepScore || 0,
+        dayPlan?.motivationScore || 0,
+        dayPlan?.voiceNotes || "",
+        completed.map((t) => t.title).join(", "),
+        pending.map((t) => t.title).join(", "),
+        manual.map((t) => t.title).join(", "),
+        getPatternsSummary(),
+      )
+
+      saveDailySummary(today, summary)
+      toast.success("Саммаризация дня сохранена")
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка")
+    } finally {
+      setSummarizing(null)
+    }
+  }
+
+  const handleWeeklySummary = async () => {
+    if (!settings.groqApiKey) {
+      toast.error("Нужен Groq API ключ")
+      return
+    }
+    setSummarizing("weekly")
+    try {
+      const now = new Date()
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(now, { weekStartsOn: 1 })
+      const days = eachDayOfInterval({ start: weekStart, end: weekEnd })
+
+      let dailyData = ""
+      for (const day of days) {
+        const dateStr = format(day, "yyyy-MM-dd")
+        const plan = dayPlans[dateStr]
+        const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+        const completed = dayTasks.filter((t) => t.status === "done").length
+        dailyData += `${format(day, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, мотивация ${plan.motivationScore}/10` : ""}\n`
+      }
+
+      const summary = await generateWeeklySummary(
+        format(weekStart, "dd.MM.yyyy"),
+        format(weekEnd, "dd.MM.yyyy"),
+        dailyData,
+        getPatternsSummary(),
+      )
+
+      const weekKey = getWeekKey(now)
+      saveWeeklySummary(weekKey, summary)
+      toast.success("Саммаризация недели сохранена")
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка")
+    } finally {
+      setSummarizing(null)
+    }
+  }
+
+  const handleMonthlySummary = async () => {
+    if (!settings.groqApiKey) {
+      toast.error("Нужен Groq API ключ")
+      return
+    }
+    setSummarizing("monthly")
+    try {
+      const now = new Date()
+      const monthStart = startOfMonth(now)
+      const monthEnd = endOfMonth(now)
+      const weeks = [
+        { start: monthStart, end: endOfWeek(monthStart, { weekStartsOn: 1 }) },
+      ]
+      let current = startOfWeek(monthStart, { weekStartsOn: 1 })
+      while (current < monthEnd) {
+        current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000)
+        if (current <= monthEnd) {
+          weeks.push({ start: current, end: endOfWeek(current, { weekStartsOn: 1 }) > monthEnd ? monthEnd : endOfWeek(current, { weekStartsOn: 1 }) })
+        }
+      }
+
+      let weeklyData = ""
+      for (const w of weeks) {
+        const days = eachDayOfInterval({ start: w.start, end: w.end })
+        let totalTasks = 0
+        let totalCompleted = 0
+        for (const day of days) {
+          const dateStr = format(day, "yyyy-MM-dd")
+          const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+          totalTasks += dayTasks.length
+          totalCompleted += dayTasks.filter((t) => t.status === "done").length
+        }
+        weeklyData += `Неделя ${format(w.start, "dd.MM")}–${format(w.end, "dd.MM")}: задач ${totalTasks}, выполнено ${totalCompleted}\n`
+      }
+
+      const summary = await generateMonthlySummary(
+        format(now, "MMMM yyyy"),
+        weeklyData,
+        getPatternsSummary(),
+      )
+
+      const monthKey = getMonthKey(now)
+      saveMonthlySummary(monthKey, summary)
+      toast.success("Саммаризация месяца сохранена")
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка")
+    } finally {
+      setSummarizing(null)
+    }
+  }
+
   return (
     <>
       <div className="min-h-screen bg-background pb-24">
@@ -108,24 +244,22 @@ const SettingsPage = () => {
               <CardContent className="space-y-3">
                 <div className="space-y-2">
                   <Label>API Key</Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type={showApiKey ? "text" : "password"}
-                        placeholder="gsk_..."
-                        value={settings.groqApiKey}
-                        onChange={(e) => {
-                          updateSettings({ groqApiKey: e.target.value })
-                          setKeyValid(null)
-                        }}
-                      />
-                      <button
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      >
-                        {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
+                  <div className="relative flex-1">
+                    <Input
+                      type={showApiKey ? "text" : "password"}
+                      placeholder="gsk_..."
+                      value={settings.groqApiKey}
+                      onChange={(e) => {
+                        updateSettings({ groqApiKey: e.target.value })
+                        setKeyValid(null)
+                      }}
+                    />
+                    <button
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -219,6 +353,53 @@ const SettingsPage = () => {
                 <p className="text-xs text-muted-foreground">
                   Необязательно. Бот будет получать утренний план и вечерний отчёт.
                 </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Саммаризация</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={handleDailySummary}
+                  disabled={summarizing !== null}
+                  className="w-full justify-start"
+                >
+                  {summarizing === "daily" ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                  )}
+                  Саммаризировать день
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleWeeklySummary}
+                  disabled={summarizing !== null}
+                  className="w-full justify-start"
+                >
+                  {summarizing === "weekly" ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CalendarRange className="h-4 w-4 mr-2" />
+                  )}
+                  Саммаризировать неделю
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleMonthlySummary}
+                  disabled={summarizing !== null}
+                  className="w-full justify-start"
+                >
+                  {summarizing === "monthly" ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Calendar className="h-4 w-4 mr-2" />
+                  )}
+                  Саммаризировать месяц
+                </Button>
               </CardContent>
             </Card>
 

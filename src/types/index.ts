@@ -26,8 +26,31 @@ export interface DayPlan {
   motivationScore: number
   voiceNotes: string
   aiSummary: string
+  aiCommentary: string
   completed: boolean
   originalPlan: DayPlanTask[]
+  conversationHistory: AIConversationMessage[]
+}
+
+export interface AIConversationMessage {
+  role: "user" | "assistant"
+  content: string
+  timestamp: string
+}
+
+export interface DaySummary {
+  date: string
+  summary: string
+  tasksPlanned: number
+  tasksCompleted: number
+  mood: string
+}
+
+export interface PeriodSummary {
+  period: string
+  summary: string
+  insights: string[]
+  patterns: string
 }
 
 export interface Patterns {
@@ -56,6 +79,7 @@ export interface MorningSession {
   voiceNotes: string
   aiPlan: DayPlanTask[]
   aiGreeting: string
+  aiCommentary: string
   aiEncouragement: string
   isLoading: boolean
   error: string | null
@@ -73,6 +97,19 @@ export interface EveningReport {
   summary: string
   completed: string[]
   postponed: string[]
+  commentary: string
   insight: string
   tomorrowSuggestion: string
+}
+
+export interface AIStatsResult {
+  completionRate: number
+  streakDays: number
+  avgTasksPerDay: number
+  bestDay: string
+  bestCategory: string
+  insight: string
+  patterns: string
+  weeklyTrend: string
+  recommendations: string[]
 }

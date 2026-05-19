@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { format } from "date-fns"
+import { format, subDays } from "date-fns"
 import { Sparkles, Repeat } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import TabBar from "@/components/layout/TabBar"
@@ -9,7 +9,16 @@ import NewTaskDialog from "@/components/NewTaskDialog"
 import MorningRoutine from "@/components/MorningRoutine"
 import DayAdjustDialog from "@/components/DayAdjustDialog"
 import { useStore } from "@/store/useStore"
+import { generateDailySummary, generateWeeklySummary } from "@/services/ai"
 import type { Priority, Category, TimeBlock } from "@/types"
+
+const getTimeGreeting = (name: string) => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) return `Доброе утро, ${name} 🌅`
+  if (hour >= 12 && hour < 18) return `Добрый день, ${name} ☀️`
+  if (hour >= 18 && hour < 23) return `Добрый вечер, ${name} 🌆`
+  return `Доброй ночи, ${name} 🌙`
+}
 
 const TodayPage = () => {
   const navigate = useNavigate()
@@ -20,11 +29,19 @@ const TodayPage = () => {
   const hasMorningRoutine = useStore((s) => s.hasMorningRoutine)
   const getDisplayName = useStore((s) => s.getDisplayName)
   const settings = useStore((s) => s.settings)
+  const dayPlans = useStore((s) => s.dayPlans)
+  const getPatternsSummary = useStore((s) => s.getPatternsSummary)
+  const saveDailySummary = useStore((s) => s.saveDailySummary)
+  const saveWeeklySummary = useStore((s) => s.saveWeeklySummary)
+  const getWeekKey = useStore((s) => s.getWeekKey)
+  const getLastSummarizedDay = useStore((s) => s.getLastSummarizedDay)
+  const getLastSummarizedWeek = useStore((s) => s.getLastSummarizedWeek)
 
   const [showMorningRoutine, setShowMorningRoutine] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
   const [showAdjustDay, setShowAdjustDay] = useState(false)
   const morningShownRef = useRef(false)
+  const autoSummaryDoneRef = useRef(false)
 
   const today = format(new Date(), "yyyy-MM-dd")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
@@ -38,6 +55,66 @@ const TodayPage = () => {
       setShowMorningRoutine(true)
     }
   }, [today, hasApiKey])
+
+  useEffect(() => {
+    if (!hasApiKey || autoSummaryDoneRef.current) return
+    autoSummaryDoneRef.current = true
+
+    const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
+    const lastSummarized = getLastSummarizedDay()
+
+    if (lastSummarized !== yesterday && dayPlans[yesterday] && dayPlans[yesterday].taskIds.length > 0) {
+      const yesterdayTasks = tasks.filter((t) => t.dueDate === yesterday)
+      const completed = yesterdayTasks.filter((t) => t.status === "done")
+      const pending = yesterdayTasks.filter((t) => t.status !== "done")
+      const manual = yesterdayTasks.filter((t) => !t.aiGenerated)
+      const plan = dayPlans[yesterday]
+
+      generateDailySummary(
+        yesterday,
+        yesterdayTasks.length,
+        completed.length,
+        plan.sleepScore || 0,
+        plan.motivationScore || 0,
+        plan.voiceNotes || "",
+        completed.map((t) => t.title).join(", "),
+        pending.map((t) => t.title).join(", "),
+        manual.map((t) => t.title).join(", "),
+        getPatternsSummary(),
+      ).then((summary) => {
+        saveDailySummary(yesterday, summary)
+      }).catch(() => {})
+    }
+
+    const todayDate = new Date()
+    const isMonday = todayDate.getDay() === 1
+    const lastSummarizedWeek = getLastSummarizedWeek()
+    const currentWeekKey = getWeekKey(todayDate)
+
+    if (isMonday && lastSummarizedWeek !== currentWeekKey) {
+      const weekStart = new Date(todayDate)
+      weekStart.setDate(todayDate.getDate() - 7)
+      let dailyData = ""
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart)
+        d.setDate(weekStart.getDate() + i)
+        const dateStr = format(d, "yyyy-MM-dd")
+        const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+        const completed = dayTasks.filter((t) => t.status === "done").length
+        const plan = dayPlans[dateStr]
+        dailyData += `${format(d, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10` : ""}\n`
+      }
+
+      generateWeeklySummary(
+        format(weekStart, "dd.MM.yyyy"),
+        format(todayDate, "dd.MM.yyyy"),
+        dailyData,
+        getPatternsSummary(),
+      ).then((summary) => {
+        saveWeeklySummary(currentWeekKey, summary)
+      }).catch(() => {})
+    }
+  }, [hasApiKey, today])
 
   const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
     addTask(title, priority, category, timeBlock, false, undefined, dueDate || today)
@@ -57,7 +134,7 @@ const TodayPage = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-semibold">
-                Доброе утро, {getDisplayName()} 🌸
+                {getTimeGreeting(getDisplayName())}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {hasApiKey ? "AI подключён" : "Добавь Groq API ключ в настройках ✨"}
