@@ -188,7 +188,7 @@ const SettingsPage = () => {
         const plan = dayPlans[dateStr]
         const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
         const completed = dayTasks.filter((t) => t.status === "done").length
-        dailyData += `${format(day, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, мотивация ${plan.motivationScore}/10` : ""}\n`
+        dailyData += `${format(day, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, энергия ${plan.energyLevel || "—"}, мотивация ${plan.motivationScore}/10` : ""}\n`
         const entries = getDiaryEntriesForPeriod(dateStr)
         if (entries !== "нет записей в дневнике") {
           diaryEntries += `${dateStr}: ${entries}\n\n`

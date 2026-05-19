@@ -116,7 +116,7 @@ const TodayPage = () => {
         const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
         const completed = dayTasks.filter((t) => t.status === "done").length
         const plan = dayPlans[dateStr]
-        dailyData += `${format(d, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10` : ""}\n`
+        dailyData += `${format(d, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, энергия ${plan.energyLevel || "—"}` : ""}\n`
       }
 
       const weekStartStr = format(weekStart, "yyyy-MM-dd")

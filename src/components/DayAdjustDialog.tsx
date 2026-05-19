@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { format } from "date-fns"
 import { Loader2, X, Check, Sparkles } from "lucide-react"
+import { v4 as uuidv4 } from "uuid"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -44,7 +46,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const addConversationMessage = useStore((s) => s.addConversationMessage)
   const getSemanticSummary = useStore((s) => s.getSemanticSummary)
 
-  const today = new Date().toLocaleDateString("en-CA")
+  const today = format(new Date(), "yyyy-MM-dd")
   const todayTasks = tasks.filter((t) => t.dueDate === today)
   const completedTasks = todayTasks.filter((t) => t.status === "done")
   const pendingTasks = todayTasks.filter((t) => t.status !== "done")
@@ -113,12 +115,12 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const handleApply = () => {
     if (!result) return
 
-    const today = new Date().toLocaleDateString("en-CA")
+    const todayStr = format(new Date(), "yyyy-MM-dd")
 
     pendingTasks.forEach((t) => deleteTask(t.id))
 
     const newTaskList: Task[] = result.newTasks.map((t, i) => ({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       title: t.title,
       priority: t.priority,
       category: t.category,
@@ -126,7 +128,7 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
       status: "todo",
       aiGenerated: true,
       aiNotes: t.aiNote,
-      dueDate: today,
+      dueDate: todayStr,
       createdAt: new Date().toISOString(),
       order: i,
     }))

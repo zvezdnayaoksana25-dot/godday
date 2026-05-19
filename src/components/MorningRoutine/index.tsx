@@ -211,20 +211,15 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     }
     saveDayPlan(plan)
 
-    const movedTasks = Object.entries(decisions)
-      .filter(([, action]) => action === "move")
-      .map(([id]) => yesterdayTasks.find((t) => t.id === id))
-      .filter(Boolean) as Task[]
-
     recordDayData(
       morningSession.sleepScore,
       morningSession.sleepTime,
       morningSession.wakeTime,
       morningSession.energyLevel,
       morningSession.motivationScore,
-      newTasks.length + movedTasks.length,
+      newTasks.length,
       0,
-      patterns.frequentlyPostponedCategories,
+      (patterns.frequentlyPostponedCategories || []),
     )
 
     const history = getConversationHistory(today)
@@ -232,7 +227,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       extractSemanticMemoryForSave()
     }
 
-    const planText = morningSession.aiPlan
+    const planText = (morningSession.aiPlan || [])
       .map(
         (t: DayPlanTask, i: number) =>
           `${i + 1}. ${timeBlockEmojis[t.suggestedTime]} ${t.title} — ${priorityLabels[t.priority]}`,
