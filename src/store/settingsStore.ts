@@ -27,7 +27,7 @@ export const createSettingsStore: StateCreator<StoreState, [], [], SettingsStore
   },
 
   getDisplayName: () => {
-    const name = get().settings.name
+    const name = get().settings?.name
     return name || "друг"
   },
 })

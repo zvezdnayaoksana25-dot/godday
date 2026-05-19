@@ -35,27 +35,29 @@ export const createDiaryStore: StateCreator<StoreState, [], [], DiaryStore> = (s
 
   saveDiaryEntry: (entry) => {
     set((state) => {
-      const updated = [...state.diaryEntries, entry]
+      const entries = state.diaryEntries || []
+      const updated = [...entries, entry]
       saveToLocalStorage(updated)
       return { diaryEntries: updated }
     })
   },
 
   getEntriesByDate: (date) => {
-    return get().diaryEntries.filter((e) => e.date === date)
+    return (get().diaryEntries || []).filter((e) => e.date === date)
   },
 
   getAllEntries: () => {
-    return get().diaryEntries
+    return get().diaryEntries || []
   },
 
   getEntriesByDateRange: (start, end) => {
-    return get().diaryEntries.filter((e) => e.date >= start && e.date <= end)
+    return (get().diaryEntries || []).filter((e) => e.date >= start && e.date <= end)
   },
 
   deleteDiaryEntry: (id) => {
     set((state) => {
-      const updated = state.diaryEntries.filter((e) => e.id !== id)
+      const entries = state.diaryEntries || []
+      const updated = entries.filter((e) => e.id !== id)
       saveToLocalStorage(updated)
       return { diaryEntries: updated }
     })
@@ -69,7 +71,7 @@ export const createDiaryStore: StateCreator<StoreState, [], [], DiaryStore> = (s
   },
 
   getDiaryEntriesForPeriod: (period) => {
-    const entries = get().diaryEntries.filter((e) => e.date.startsWith(period))
+    const entries = (get().diaryEntries || []).filter((e) => e.date.startsWith(period))
     if (entries.length === 0) return "нет записей в дневнике"
     return entries
       .map((e) => `${e.date}${e.mood ? ` (настроение: ${e.mood}/5)` : ""}: ${e.content}`)

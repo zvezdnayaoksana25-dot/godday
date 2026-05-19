@@ -170,14 +170,15 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     if (isCompleting.current) return
     isCompleting.current = true
 
-    const decisions = morningSession.yesterdayTaskDecisions
+    const decisions = morningSession.yesterdayTaskDecisions || {}
     Object.entries(decisions).forEach(([id, action]) => {
       if (action === "delete") {
         deleteTask(id)
       }
     })
 
-    const newTasks: Task[] = morningSession.aiPlan.map((task: DayPlanTask, i: number) => ({
+    const aiPlan = morningSession.aiPlan || []
+    const newTasks: Task[] = aiPlan.map((task: DayPlanTask, i: number) => ({
       id: uuidv4(),
       title: task.title,
       priority: task.priority,
@@ -206,7 +207,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       aiSummary: morningSession.aiGreeting,
       aiCommentary: morningSession.aiCommentary,
       completed: false,
-      originalPlan: morningSession.aiPlan,
+      originalPlan: aiPlan,
     }
     saveDayPlan(plan)
 
@@ -625,7 +626,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
             )}
 
             <div className="space-y-3">
-              {morningSession.aiPlan.map((task: DayPlanTask, i: number) => (
+              {(morningSession.aiPlan || []).map((task: DayPlanTask, i: number) => (
                 <Card key={i} className="p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">

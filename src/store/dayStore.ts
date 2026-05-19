@@ -24,20 +24,21 @@ export const createDayStore: StateCreator<StoreState, [], [], DayStore> = (set, 
   },
 
   getDayPlan: (date) => {
-    return get().dayPlans[date]
+    return get().dayPlans?.[date]
   },
 
   getTodayPlan: () => {
-    return get().dayPlans[getTodayString()]
+    return get().dayPlans?.[getTodayString()]
   },
 
   markDayComplete: (date) => {
     set((state) => {
-      const plan = state.dayPlans[date]
+      const plans = state.dayPlans || {}
+      const plan = plans[date]
       if (!plan) return state
       return {
         dayPlans: {
-          ...state.dayPlans,
+          ...plans,
           [date]: { ...plan, completed: true },
         },
       }
@@ -45,6 +46,6 @@ export const createDayStore: StateCreator<StoreState, [], [], DayStore> = (set, 
   },
 
   hasMorningRoutine: (date) => {
-    return !!get().dayPlans[date]
+    return !!(get().dayPlans || {})[date]
   },
 })

@@ -63,30 +63,30 @@ export const createSummaryStore: StateCreator<StoreState, [], [], SummaryStore> 
   },
 
   getLastSummarizedDay: () => {
-    const summaries = get().dailySummaries
+    const summaries = get().dailySummaries || {}
     const keys = Object.keys(summaries).sort()
     return keys.length > 0 ? keys[keys.length - 1] : null
   },
 
   getLastSummarizedWeek: () => {
-    const summaries = get().weeklySummaries
+    const summaries = get().weeklySummaries || {}
     const keys = Object.keys(summaries).sort()
     return keys.length > 0 ? keys[keys.length - 1] : null
   },
 
   getLastSummarizedMonth: () => {
-    const summaries = get().monthlySummaries
+    const summaries = get().monthlySummaries || {}
     const keys = Object.keys(summaries).sort()
     return keys.length > 0 ? keys[keys.length - 1] : null
   },
 
   getDayTasksData: (date, tasks, dayPlans) => {
-    const dayTasks = tasks.filter((t) => t.dueDate === date)
+    const dayTasks = (tasks || []).filter((t) => t.dueDate === date)
     const completed = dayTasks.filter((t) => t.status === "done").length
     return {
       total: dayTasks.length,
       completed,
-      plan: dayPlans[date],
+      plan: dayPlans?.[date],
     }
   },
 })

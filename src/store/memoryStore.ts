@@ -71,92 +71,120 @@ export const createMemoryStore: StateCreator<StoreState, [], [], MemoryStore> = 
   },
 
   addSemanticFact: (fact) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        facts: [...state.semanticMemory.facts, fact],
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const facts = state.semanticMemory?.facts || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          facts: [...facts, fact],
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   removeSemanticFact: (index) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        facts: state.semanticMemory.facts.filter((_, i) => i !== index),
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const facts = state.semanticMemory?.facts || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          facts: facts.filter((_, i) => i !== index),
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   addSemanticGoal: (goal) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        goals: [...state.semanticMemory.goals, goal],
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const goals = state.semanticMemory?.goals || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          goals: [...goals, goal],
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   removeSemanticGoal: (index) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        goals: state.semanticMemory.goals.filter((_, i) => i !== index),
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const goals = state.semanticMemory?.goals || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          goals: goals.filter((_, i) => i !== index),
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   addSemanticPreference: (pref) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        preferences: [...state.semanticMemory.preferences, pref],
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const preferences = state.semanticMemory?.preferences || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          preferences: [...preferences, pref],
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   removeSemanticPreference: (index) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        preferences: state.semanticMemory.preferences.filter((_, i) => i !== index),
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const preferences = state.semanticMemory?.preferences || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          preferences: preferences.filter((_, i) => i !== index),
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   addSemanticProject: (project) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        projects: [...state.semanticMemory.projects, project],
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const projects = state.semanticMemory?.projects || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          projects: [...projects, project],
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   removeSemanticProject: (index) => {
-    set((state) => ({
-      semanticMemory: {
-        ...state.semanticMemory,
-        projects: state.semanticMemory.projects.filter((_, i) => i !== index),
-        lastUpdated: new Date().toISOString(),
-      },
-    }))
+    set((state) => {
+      const projects = state.semanticMemory?.projects || []
+      return {
+        semanticMemory: {
+          ...state.semanticMemory,
+          projects: projects.filter((_, i) => i !== index),
+          lastUpdated: new Date().toISOString(),
+        },
+      }
+    })
   },
 
   getSemanticSummary: () => {
     const m = get().semanticMemory
+    const facts = m?.facts || []
+    const goals = m?.goals || []
+    const preferences = m?.preferences || []
+    const projects = m?.projects || []
     const parts: string[] = []
-    if (m.facts.length > 0) parts.push(`Факты: ${m.facts.join("; ")}`)
-    if (m.goals.length > 0) parts.push(`Цели: ${m.goals.join("; ")}`)
-    if (m.preferences.length > 0) parts.push(`Предпочтения: ${m.preferences.join("; ")}`)
-    if (m.projects.length > 0) parts.push(`Проекты: ${m.projects.join("; ")}`)
+    if (facts.length > 0) parts.push(`Факты: ${facts.join("; ")}`)
+    if (goals.length > 0) parts.push(`Цели: ${goals.join("; ")}`)
+    if (preferences.length > 0) parts.push(`Предпочтения: ${preferences.join("; ")}`)
+    if (projects.length > 0) parts.push(`Проекты: ${projects.join("; ")}`)
     return parts.length > 0 ? parts.join(". ") : "нет"
   },
 })

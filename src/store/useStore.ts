@@ -27,22 +27,32 @@ export const useStore = create<StoreState>()(
     {
       name: "flowday-data",
       storage: createJSONStorage(() => indexedDBStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState: any, version: number) => {
-        if (version === 0 && persistedState?.state?.patterns) {
-          const p = persistedState.state.patterns
-          if (!p.energyHistory) p.energyHistory = []
-          if (!p.avgSleepDuration) p.avgSleepDuration = 8
-          if (!p.motivationHistory) p.motivationHistory = []
-          if (!p.sleepHistory) p.sleepHistory = []
-          if (!p.frequentlyPostponedCategories) p.frequentlyPostponedCategories = []
-        }
-        if (version === 0 && persistedState?.state?.semanticMemory) {
-          const sm = persistedState.state.semanticMemory
-          if (!sm.facts) sm.facts = []
-          if (!sm.goals) sm.goals = []
-          if (!sm.preferences) sm.preferences = []
-          if (!sm.projects) sm.projects = []
+        if (version < 2 && persistedState?.state) {
+          const s = persistedState.state
+          if (!s.tasks) s.tasks = []
+          if (!s.dayPlans) s.dayPlans = {}
+          if (!s.conversationHistory) s.conversationHistory = {}
+          if (!s.dailySummaries) s.dailySummaries = {}
+          if (!s.weeklySummaries) s.weeklySummaries = {}
+          if (!s.monthlySummaries) s.monthlySummaries = {}
+          if (!s.diaryEntries) s.diaryEntries = []
+          if (s.patterns) {
+            const p = s.patterns
+            if (!p.energyHistory) p.energyHistory = []
+            if (!p.avgSleepDuration) p.avgSleepDuration = 8
+            if (!p.motivationHistory) p.motivationHistory = []
+            if (!p.sleepHistory) p.sleepHistory = []
+            if (!p.frequentlyPostponedCategories) p.frequentlyPostponedCategories = []
+          }
+          if (s.semanticMemory) {
+            const sm = s.semanticMemory
+            if (!sm.facts) sm.facts = []
+            if (!sm.goals) sm.goals = []
+            if (!sm.preferences) sm.preferences = []
+            if (!sm.projects) sm.projects = []
+          }
         }
         return persistedState
       },

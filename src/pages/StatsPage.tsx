@@ -184,7 +184,7 @@ const StatsPage = () => {
                 <div>
                   <h3 className="text-sm font-medium mb-1">Инсайт</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {parsedStats.insight}
+                    {parsedStats.insight || "Нет данных"}
                   </p>
                 </div>
               </div>
@@ -210,9 +210,9 @@ const StatsPage = () => {
                 <span className="text-xs text-muted-foreground">Выполнено</span>
               </div>
               <p className="text-2xl font-semibold">
-                {parsedStats ? `${parsedStats.completionRate}%` : `${(completionRate * 100).toFixed(0)}%`}
+                {parsedStats ? `${parsedStats.completionRate ?? 0}%` : `${(completionRate * 100).toFixed(0)}%`}
               </p>
-              <Progress value={parsedStats ? parsedStats.completionRate : completionRate * 100} className="mt-2" />
+              <Progress value={parsedStats ? (parsedStats.completionRate ?? 0) : completionRate * 100} className="mt-2" />
             </Card>
 
             <Card className="p-4">
@@ -221,7 +221,7 @@ const StatsPage = () => {
                 <span className="text-xs text-muted-foreground">Серия дней</span>
               </div>
               <p className="text-2xl font-semibold">
-                {parsedStats ? parsedStats.streakDays : totalDays}
+                {parsedStats ? (parsedStats.streakDays ?? 0) : totalDays}
               </p>
               <p className="text-xs text-muted-foreground">дней с планом</p>
             </Card>
@@ -232,7 +232,7 @@ const StatsPage = () => {
                 <span className="text-xs text-muted-foreground">Задач/день</span>
               </div>
               <p className="text-2xl font-semibold">
-                {parsedStats ? parsedStats.avgTasksPerDay : (totalDays > 0 ? (totalTasks / totalDays).toFixed(1) : "—")}
+                {parsedStats ? (parsedStats.avgTasksPerDay ?? "—") : (totalDays > 0 ? (totalTasks / totalDays).toFixed(1) : "—")}
               </p>
               <p className="text-xs text-muted-foreground">в среднем</p>
             </Card>
@@ -243,10 +243,10 @@ const StatsPage = () => {
                 <span className="text-xs text-muted-foreground">Лучший день</span>
               </div>
               <p className="text-2xl font-semibold">
-                {parsedStats ? parsedStats.bestDay : "—"}
+                {parsedStats ? (parsedStats.bestDay ?? "—") : "—"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {parsedStats ? `Топ: ${parsedStats.bestCategory}` : `${avgMotivation.toFixed(1)}/10 мотивация`}
+                {parsedStats ? `Топ: ${parsedStats.bestCategory ?? "—"}` : `${(avgMotivation || 0).toFixed(1)}/10 мотивация`}
               </p>
             </Card>
           </div>
@@ -256,22 +256,22 @@ const StatsPage = () => {
               <Card className="p-4 mb-6">
                 <h3 className="text-sm font-medium mb-3">Тренд недели</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {parsedStats.weeklyTrend}
+                  {parsedStats.weeklyTrend || "Нет данных"}
                 </p>
               </Card>
 
               <Card className="p-4 mb-6">
                 <h3 className="text-sm font-medium mb-3">Паттерны</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {parsedStats.patterns}
+                  {parsedStats.patterns || "Нет данных"}
                 </p>
               </Card>
 
-              {parsedStats.recommendations.length > 0 && (
+              {(parsedStats.recommendations?.length || 0) > 0 && (
                 <Card className="p-4 mb-6">
                   <h3 className="text-sm font-medium mb-3">Рекомендации</h3>
                   <div className="space-y-2">
-                    {parsedStats.recommendations.map((rec, i) => (
+                    {(parsedStats.recommendations || []).map((rec, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <span className="text-primary text-sm mt-0.5">•</span>
                         <p className="text-sm text-muted-foreground">{rec}</p>

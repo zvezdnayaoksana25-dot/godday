@@ -151,7 +151,7 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
     const avgDuration =
       sleepHistory.length > 0
         ? sleepHistory.reduce((sum, s) => sum + s.duration, 0) / sleepHistory.length
-        : p.avgSleepDuration
+        : (p.avgSleepDuration || 8)
 
     const energyCounts = { low: 0, medium: 0, high: 0 }
     energyHistory.forEach((e) => { energyCounts[e.level]++ })
@@ -162,6 +162,9 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
         ? "чаще чувствуешь разбитость"
         : "энергия обычно в норме"
 
-    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(p.avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${p.avgTasksPerDay} задач в день. Часто переносимые категории: ${frequentlyPostponedCategories.join(", ") || "нет"}.`
+    const avgCompletionRate = p.avgCompletionRate ?? 0
+    const avgTasksPerDay = p.avgTasksPerDay ?? 0
+
+    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${avgTasksPerDay} задач в день. Часто переносимые категории: ${frequentlyPostponedCategories.join(", ") || "нет"}.`
   },
 })

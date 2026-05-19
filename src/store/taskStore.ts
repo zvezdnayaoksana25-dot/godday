@@ -25,6 +25,7 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
   tasks: [],
 
   addTask: (title, priority = "medium", category = "other", timeBlock, aiGenerated = false, aiNotes, dueDate) => {
+    const tasks = get().tasks || []
     const task: Task = {
       id: uuidv4(),
       title,
@@ -36,29 +37,29 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
       aiNotes,
       dueDate: dueDate || getTodayString(),
       createdAt: new Date().toISOString(),
-      order: get().tasks.length,
+      order: tasks.length,
     }
-    set((state) => ({ tasks: [...state.tasks, task] }))
+    set((state) => ({ tasks: [...(state.tasks || []), task] }))
     return task
   },
 
   addTasks: (newTasks) => {
-    set((state) => ({ tasks: [...state.tasks, ...newTasks] }))
+    set((state) => ({ tasks: [...(state.tasks || []), ...newTasks] }))
   },
 
   updateTask: (id, updates) => {
     set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)),
+      tasks: (state.tasks || []).map((t) => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)),
     }))
   },
 
   deleteTask: (id) => {
-    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }))
+    set((state) => ({ tasks: (state.tasks || []).filter((t) => t.id !== id) }))
   },
 
   moveTask: (id, status) => {
     set((state) => ({
-      tasks: state.tasks.map((t) =>
+      tasks: (state.tasks || []).map((t) =>
         t.id === id
           ? { ...t, status, completedAt: status === "done" ? new Date().toISOString() : t.completedAt }
           : t,
@@ -68,7 +69,7 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
 
   completeTask: (id) => {
     set((state) => ({
-      tasks: state.tasks.map((t) =>
+      tasks: (state.tasks || []).map((t) =>
         t.id === id ? { ...t, status: "done" as const, completedAt: new Date().toISOString() } : t,
       ),
     }))
@@ -76,7 +77,7 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
 
   uncompleteTask: (id) => {
     set((state) => ({
-      tasks: state.tasks.map((t) =>
+      tasks: (state.tasks || []).map((t) =>
         t.id === id ? { ...t, status: "todo" as const, completedAt: undefined } : t,
       ),
     }))
@@ -87,15 +88,15 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
   },
 
   getTasksByStatus: (status) => {
-    return get().tasks.filter((t) => t.status === status)
+    return (get().tasks || []).filter((t) => t.status === status)
   },
 
   getTasksByDate: (date) => {
-    return get().tasks.filter((t) => t.dueDate === date)
+    return (get().tasks || []).filter((t) => t.dueDate === date)
   },
 
   getTodayTasks: () => {
     const today = getTodayString()
-    return get().tasks.filter((t) => t.dueDate === today)
+    return (get().tasks || []).filter((t) => t.dueDate === today)
   },
 })
