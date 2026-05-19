@@ -27,6 +27,15 @@ export const useStore = create<StoreState>()(
     {
       name: "flowday-data",
       storage: createJSONStorage(() => indexedDBStorage),
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 && persistedState?.state?.patterns) {
+          const p = persistedState.state.patterns
+          if (!p.energyHistory) p.energyHistory = []
+          if (!p.avgSleepDuration) p.avgSleepDuration = 8
+        }
+        return persistedState
+      },
     },
   ),
 )
