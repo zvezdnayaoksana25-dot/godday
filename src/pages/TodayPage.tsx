@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { format, subDays } from "date-fns"
 import { Sparkles, Repeat } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -26,6 +26,8 @@ const TodayPage = () => {
   const completeTask = useStore((s) => s.completeTask)
   const deleteTask = useStore((s) => s.deleteTask)
   const addTask = useStore((s) => s.addTask)
+  const updateTask = useStore((s) => s.updateTask)
+  const updateTaskDueDate = useStore((s) => s.updateTaskDueDate)
   const hasMorningRoutine = useStore((s) => s.hasMorningRoutine)
   const getDisplayName = useStore((s) => s.getDisplayName)
   const settings = useStore((s) => s.settings)
@@ -55,16 +57,24 @@ const TodayPage = () => {
     }
   }, [today, hasApiKey])
 
+  // A3: Debounce recalcPatternsFromTasks — only recalculate 500ms after tasks stop changing
+  const recalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    recalcPatternsFromTasks()
+    if (recalcTimerRef.current) clearTimeout(recalcTimerRef.current)
+    recalcTimerRef.current = setTimeout(() => {
+      recalcPatternsFromTasks()
+    }, 500)
+    return () => {
+      if (recalcTimerRef.current) clearTimeout(recalcTimerRef.current)
+    }
   }, [tasks])
 
+  // A2: Auto-summaries — set localStorage flags AFTER successful AI call
   useEffect(() => {
     if (!hasApiKey) return
 
     const summaryKey = `flowday-summary-${today}`
     if (localStorage.getItem(summaryKey)) return
-    localStorage.setItem(summaryKey, "1")
 
     const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
     const lastSummarized = getLastSummarizedDay()
@@ -93,6 +103,7 @@ const TodayPage = () => {
         getDiaryEntriesForPeriod(yesterday),
       ).then((summary) => {
         saveDailySummary(yesterday, summary)
+        localStorage.setItem(summaryKey, "1")
       }).catch(() => {})
     }
 
@@ -104,7 +115,6 @@ const TodayPage = () => {
     if (isMonday && lastSummarizedWeek !== currentWeekKey) {
       const weekStartKey = `flowday-week-summary-${currentWeekKey}`
       if (localStorage.getItem(weekStartKey)) return
-      localStorage.setItem(weekStartKey, "1")
 
       const weekStart = new Date(todayDate)
       weekStart.setDate(todayDate.getDate() - 7)
@@ -140,13 +150,26 @@ const TodayPage = () => {
         diaryEntries,
       ).then((summary) => {
         saveWeeklySummary(currentWeekKey, summary)
+        localStorage.setItem(weekStartKey, "1")
       }).catch(() => {})
     }
   }, [hasApiKey])
 
-  const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
+  const handleAddTask = useCallback((title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
     addTask(title, priority, category, timeBlock, false, undefined, dueDate || today)
-  }
+  }, [addTask, today])
+
+  const handleEditTask = useCallback((id: string, title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
+    updateTask(id, { title, priority, category, timeBlock, dueDate: dueDate || today })
+  }, [updateTask, today])
+
+  const handleMoveDate = useCallback((id: string, newDate: string) => {
+    updateTaskDueDate(id, newDate)
+  }, [updateTaskDueDate])
+
+  const handleTimeBlockChange = useCallback((id: string, newTimeBlock?: TimeBlock) => {
+    updateTask(id, { timeBlock: newTimeBlock })
+  }, [updateTask])
 
   return (
     <>
@@ -200,6 +223,9 @@ const TodayPage = () => {
             onComplete={completeTask}
             onDelete={deleteTask}
             onAddTask={() => setShowNewTask(true)}
+            onEdit={handleEditTask}
+            onMoveDate={handleMoveDate}
+            onTimeBlockChange={handleTimeBlockChange}
             emptyMessage="Задач на сегодня нет"
           />
         </div>

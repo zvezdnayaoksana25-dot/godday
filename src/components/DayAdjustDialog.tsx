@@ -117,30 +117,32 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
 
     const todayStr = format(new Date(), "yyyy-MM-dd")
 
-    pendingTasks.forEach((t) => deleteTask(t.id))
+    if (result.newTasks.length > 0) {
+      pendingTasks.forEach((t) => deleteTask(t.id))
 
-    const newTaskList: Task[] = result.newTasks.map((t, i) => ({
-      id: uuidv4(),
-      title: t.title,
-      priority: t.priority,
-      category: t.category,
-      timeBlock: t.suggestedTime,
-      status: "todo",
-      aiGenerated: true,
-      aiNotes: t.aiNote,
-      dueDate: todayStr,
-      createdAt: new Date().toISOString(),
-      order: i,
-    }))
+      const newTaskList: Task[] = result.newTasks.map((t, i) => ({
+        id: uuidv4(),
+        title: t.title,
+        priority: t.priority,
+        category: t.category,
+        timeBlock: t.suggestedTime,
+        status: "todo",
+        aiGenerated: true,
+        aiNotes: t.aiNote,
+        dueDate: todayStr,
+        createdAt: new Date().toISOString(),
+        order: i,
+      }))
 
-    addTasks(newTaskList)
+      addTasks(newTaskList)
 
-    if (dayPlan) {
-      saveDayPlan({
-        ...dayPlan,
-        originalPlan: result.newTasks,
-        aiCommentary: result.commentary,
-      })
+      if (dayPlan) {
+        saveDayPlan({
+          ...dayPlan,
+          originalPlan: result.newTasks,
+          aiCommentary: result.commentary,
+        })
+      }
     }
 
     onOpenChange(false)

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { format, subDays } from "date-fns"
 import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2, ChevronUp, ChevronDown } from "lucide-react"
@@ -74,6 +74,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const semanticMemory = useStore((s) => s.semanticMemory)
   const setSemanticMemory = useStore((s) => s.setSemanticMemory)
   const deleteTask = useStore((s) => s.deleteTask)
+  const updateTaskDueDate = useStore((s) => s.updateTaskDueDate)
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
@@ -81,6 +82,12 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [expandedYesterday, setExpandedYesterday] = useState(false)
   const isCompleting = useRef(false)
+  const isMounted = useRef(true)
+  const speechTextRef = useRef("")
+
+  useEffect(() => {
+    return () => { isMounted.current = false }
+  }, [])
 
   const today = format(new Date(), "yyyy-MM-dd")
   const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
@@ -171,9 +178,14 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     isCompleting.current = true
 
     const decisions = morningSession.yesterdayTaskDecisions || {}
+    const tomorrow = format(new Date(Date.now() + 86400000), "yyyy-MM-dd")
     Object.entries(decisions).forEach(([id, action]) => {
       if (action === "delete") {
         deleteTask(id)
+      } else if (action === "move") {
+        updateTaskDueDate(id, today)
+      } else if (action === "later") {
+        updateTaskDueDate(id, tomorrow)
       }
     })
 
@@ -211,6 +223,11 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     }
     saveDayPlan(plan)
 
+    const movedCategories = Object.entries(decisions)
+      .filter(([, action]) => action === "move")
+      .map(([id]) => yesterdayTasks.find((t) => t.id === id)?.category)
+      .filter(Boolean)
+
     recordDayData(
       morningSession.sleepScore,
       morningSession.sleepTime,
@@ -219,7 +236,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       morningSession.motivationScore,
       newTasks.length,
       0,
-      (patterns.frequentlyPostponedCategories || []),
+      movedCategories as any,
     )
 
     const history = getConversationHistory(today)
@@ -245,13 +262,14 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       const history = getConversationHistory(today)
       const conversation = history.map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`).join("\n\n")
       extractSemanticMemory(conversation, voiceInput, JSON.stringify(morningSession.aiPlan)).then((extracted) => {
+        if (!isMounted.current) return
         const hasNew = (extracted.facts?.length || 0) + (extracted.goals?.length || 0) + (extracted.preferences?.length || 0) + (extracted.projects?.length || 0)
         if (hasNew > 0) {
           setSemanticMemory({
-            facts: [...new Set([...semanticMemory.facts, ...(extracted.facts || [])])],
-            goals: [...new Set([...semanticMemory.goals, ...(extracted.goals || [])])],
-            preferences: [...new Set([...semanticMemory.preferences, ...(extracted.preferences || [])])],
-            projects: [...new Set([...semanticMemory.projects, ...(extracted.projects || [])])],
+            facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])],
+            goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])],
+            preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])],
+            projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])],
             lastUpdated: new Date().toISOString(),
           })
         }
@@ -300,13 +318,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       return
     }
 
-    let fullText = voiceInput
+    speechTextRef.current = voiceInput
 
     const { stop } = startSpeechRecognition(
       (text, isFinal) => {
         if (isFinal) {
-          fullText += (fullText ? " " : "") + text
-          setVoiceInput(fullText)
+          speechTextRef.current += (speechTextRef.current ? " " : "") + text
+          setVoiceInput(speechTextRef.current)
         }
       },
       () => {

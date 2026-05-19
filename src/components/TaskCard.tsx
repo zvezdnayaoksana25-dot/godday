@@ -1,17 +1,15 @@
 import { useState } from "react"
+import { format } from "date-fns"
+import { ru } from "date-fns/locale"
 import { motion, AnimatePresence } from "framer-motion"
-import { Check, Trash2, ChevronDown, AlertTriangle } from "lucide-react"
+import { Check, Trash2, ChevronDown, AlertTriangle, Pencil, CalendarDays, Clock } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import type { Task } from "@/types"
-
-interface TaskCardProps {
-  task: Task
-  onComplete: (id: string) => void
-  onDelete: (id: string) => void
-  index?: number
-}
+import type { Task, TimeBlock } from "@/types"
+import EditTaskDialog from "@/components/EditTaskDialog"
 
 const categoryEmojis: Record<string, string> = {
   work: "💼",
@@ -22,11 +20,13 @@ const categoryEmojis: Record<string, string> = {
   other: "📝",
 }
 
-const timeBlockEmojis: Record<string, string> = {
+const timeBlockEmojis: Record<TimeBlock, string> = {
   morning: "🌅",
   afternoon: "☀️",
   evening: "🌙",
 }
+
+const timeBlockOrder: TimeBlock[] = ["morning", "afternoon", "evening"]
 
 const priorityColors: Record<string, string> = {
   high: "border-l-destructive/50",
@@ -34,12 +34,39 @@ const priorityColors: Record<string, string> = {
   low: "border-l-muted-foreground/30",
 }
 
-const TaskCard = ({ task, onComplete, onDelete, index = 0 }: TaskCardProps) => {
+interface TaskCardProps {
+  task: Task
+  onComplete: (id: string) => void
+  onDelete: (id: string) => void
+  onEdit?: (id: string, title: string, priority: Task["priority"], category: Task["category"], timeBlock?: TimeBlock, dueDate?: string) => void
+  onMoveDate?: (id: string, newDate: string) => void
+  onTimeBlockChange?: (id: string, newTimeBlock?: TimeBlock) => void
+  index?: number
+}
+
+const TaskCard = ({ task, onComplete, onDelete, onEdit, onMoveDate, onTimeBlockChange, index = 0 }: TaskCardProps) => {
   const isDone = task.status === "done"
   const [expanded, setExpanded] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showMoveCalendar, setShowMoveCalendar] = useState(false)
 
   const hasNote = !!task.aiNotes
+
+  const cycleTimeBlock = () => {
+    if (!onTimeBlockChange) return
+    const currentIdx = task.timeBlock ? timeBlockOrder.indexOf(task.timeBlock) : -1
+    const nextIdx = (currentIdx + 1) % timeBlockOrder.length
+    const next = timeBlockOrder[nextIdx]
+    onTimeBlockChange(task.id, next === task.timeBlock ? undefined : next)
+  }
+
+  const handleMoveDate = (date: Date | undefined) => {
+    if (!date || !onMoveDate) return
+    const dateStr = format(date, "yyyy-MM-dd")
+    onMoveDate(task.id, dateStr)
+    setShowMoveCalendar(false)
+  }
 
   return (
     <>
@@ -79,10 +106,22 @@ const TaskCard = ({ task, onComplete, onDelete, index = 0 }: TaskCardProps) => {
               >
                 {task.title}
               </button>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="text-xs">
-                  {categoryEmojis[task.category]} {timeBlockEmojis[task.timeBlock || ""]}
+                  {categoryEmojis[task.category]}
                 </span>
+                {task.timeBlock && onTimeBlockChange && (
+                  <button
+                    onClick={cycleTimeBlock}
+                    className="text-xs hover:opacity-70 transition-opacity flex items-center gap-0.5"
+                  >
+                    {timeBlockEmojis[task.timeBlock]}
+                    <Clock className="h-2.5 w-2.5" />
+                  </button>
+                )}
+                {task.timeBlock && !onTimeBlockChange && (
+                  <span className="text-xs">{timeBlockEmojis[task.timeBlock]}</span>
+                )}
                 {task.aiGenerated && (
                   <Badge variant="soft" className="text-[10px] px-1.5 py-0">
                     AI
@@ -115,12 +154,42 @@ const TaskCard = ({ task, onComplete, onDelete, index = 0 }: TaskCardProps) => {
               </AnimatePresence>
             </div>
 
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0 mt-0.5"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+              {onEdit && (
+                <button
+                  onClick={() => setShowEditDialog(true)}
+                  className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onMoveDate && (
+                <Popover open={showMoveCalendar} onOpenChange={setShowMoveCalendar}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={task.dueDate ? new Date(task.dueDate + "T00:00:00") : undefined}
+                      onSelect={handleMoveDate}
+                      locale={ru}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         </Card>
       </motion.div>
@@ -172,6 +241,15 @@ const TaskCard = ({ task, onComplete, onDelete, index = 0 }: TaskCardProps) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {onEdit && (
+        <EditTaskDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          task={task}
+          onSubmit={onEdit}
+        />
+      )}
     </>
   )
 }

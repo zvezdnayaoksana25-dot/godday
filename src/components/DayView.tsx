@@ -7,6 +7,9 @@ interface DayViewProps {
   onComplete: (id: string) => void
   onDelete: (id: string) => void
   onAddTask: () => void
+  onEdit?: (id: string, title: string, priority: Task["priority"], category: Task["category"], timeBlock?: TimeBlock, dueDate?: string) => void
+  onMoveDate?: (id: string, newDate: string) => void
+  onTimeBlockChange?: (id: string, newTimeBlock?: TimeBlock) => void
   emptyMessage?: string
 }
 
@@ -18,7 +21,7 @@ const timeBlockLabels: Record<string, string> = {
 
 const timeBlockOrder: TimeBlock[] = ["morning", "afternoon", "evening"]
 
-const DayView = ({ tasks, onComplete, onDelete, onAddTask, emptyMessage = "Задач нет" }: DayViewProps) => {
+const DayView = ({ tasks, onComplete, onDelete, onAddTask, onEdit, onMoveDate, onTimeBlockChange, emptyMessage = "Задач нет" }: DayViewProps) => {
   const totalTasks = tasks.length
   const completedTasks = tasks.filter((t) => t.status === "done").length
 
@@ -64,6 +67,9 @@ const DayView = ({ tasks, onComplete, onDelete, onAddTask, emptyMessage = "За�
                     task={task}
                     onComplete={onComplete}
                     onDelete={onDelete}
+                    onEdit={onEdit}
+                    onMoveDate={onMoveDate}
+                    onTimeBlockChange={onTimeBlockChange}
                     index={i}
                   />
                 ))}
@@ -87,6 +93,9 @@ const DayView = ({ tasks, onComplete, onDelete, onAddTask, emptyMessage = "За�
                 task={task}
                 onComplete={onComplete}
                 onDelete={onDelete}
+                onEdit={onEdit}
+                onMoveDate={onMoveDate}
+                onTimeBlockChange={onTimeBlockChange}
                 index={i}
               />
             ))}

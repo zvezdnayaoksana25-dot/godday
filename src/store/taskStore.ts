@@ -9,6 +9,7 @@ export interface TaskStore {
   addTask: (title: string, priority?: Priority, category?: Category, timeBlock?: TimeBlock, aiGenerated?: boolean, aiNotes?: string, dueDate?: string) => Task
   addTasks: (newTasks: Task[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
+  updateTaskDueDate: (id: string, newDate: string) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: Task["status"]) => void
   completeTask: (id: string) => void
@@ -50,6 +51,14 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
   updateTask: (id, updates) => {
     set((state) => ({
       tasks: (state.tasks || []).map((t) => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)),
+    }))
+  },
+
+  updateTaskDueDate: (id, newDate) => {
+    set((state) => ({
+      tasks: (state.tasks || []).map((t) =>
+        t.id === id ? { ...t, dueDate: newDate, updatedAt: new Date().toISOString() } : t,
+      ),
     }))
   },
 

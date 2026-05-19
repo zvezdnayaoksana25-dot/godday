@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns"
 import { ru } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
@@ -14,6 +14,8 @@ const CalendarPage = () => {
   const completeTask = useStore((s) => s.completeTask)
   const deleteTask = useStore((s) => s.deleteTask)
   const addTask = useStore((s) => s.addTask)
+  const updateTask = useStore((s) => s.updateTask)
+  const updateTaskDueDate = useStore((s) => s.updateTaskDueDate)
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -52,6 +54,18 @@ const CalendarPage = () => {
   const handleAddTask = (title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
     addTask(title, priority, category, timeBlock, false, undefined, dueDate || selectedDateStr)
   }
+
+  const handleEditTask = useCallback((id: string, title: string, priority: Priority, category: Category, timeBlock?: TimeBlock, dueDate?: string) => {
+    updateTask(id, { title, priority, category, timeBlock, dueDate: dueDate || selectedDateStr })
+  }, [updateTask, selectedDateStr])
+
+  const handleMoveDate = useCallback((id: string, newDate: string) => {
+    updateTaskDueDate(id, newDate)
+  }, [updateTaskDueDate])
+
+  const handleTimeBlockChange = useCallback((id: string, newTimeBlock?: TimeBlock) => {
+    updateTask(id, { timeBlock: newTimeBlock })
+  }, [updateTask])
 
   return (
     <>
@@ -140,6 +154,9 @@ const CalendarPage = () => {
             onComplete={completeTask}
             onDelete={deleteTask}
             onAddTask={() => setShowNewTask(true)}
+            onEdit={handleEditTask}
+            onMoveDate={handleMoveDate}
+            onTimeBlockChange={handleTimeBlockChange}
             emptyMessage={
               isToday(selectedDate)
                 ? "Задач на сегодня нет"

@@ -304,6 +304,7 @@ export async function generateAIStats(
   patternsSummary: string,
   recentDailySummaries: string,
   diaryEntries: string,
+  dailyBreakdown: string,
 ): Promise<{
   completionRate: number
   streakDays: number
@@ -326,6 +327,7 @@ export async function generateAIStats(
     patternsSummary,
     recentDailySummaries,
     diaryEntries,
+    dailyBreakdown,
   )
   const raw = await callAI(prompt)
 

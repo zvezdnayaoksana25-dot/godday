@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { format, subDays } from "date-fns"
 import { motion, AnimatePresence } from "framer-motion"
 import { BookOpen, ChevronDown, Trash2, Loader2 } from "lucide-react"
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
 import { sendDiaryEntryToBackup } from "@/services/telegram"
 import { extractSemanticMemory } from "@/services/ai"
+import { v4 as uuidv4 } from "uuid"
 import type { DiaryEntry } from "@/types"
 
 const moodEmojis = ["😔", "😕", "😐", "🙂", "😊"]
@@ -30,20 +31,22 @@ const DiaryPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
   const [savedCount, setSavedCount] = useState(0)
-
-  const today = format(new Date(), "yyyy-MM-dd")
-  const todayEntries = getEntriesByDate(today)
+  const isMounted = useRef(true)
 
   useEffect(() => {
     restoreFromBackup()
+    return () => { isMounted.current = false }
   }, [])
+
+  const today = format(new Date(), "yyyy-MM-dd")
+  const todayEntries = getEntriesByDate(today)
 
   const handleSave = async () => {
     if (!content.trim()) return
     setIsSaving(true)
 
     const entry: DiaryEntry = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       date: today,
       content: content.trim(),
       mood: mood || undefined,
@@ -54,14 +57,24 @@ const DiaryPage = () => {
 
     sendDiaryEntryToBackup(entry).catch(() => {})
 
-    extractSemanticMemory(content.trim(), "", "").then((extracted) => {
+    const existingEntries = diaryEntries
+      .filter((e) => e.date === today && e.id !== entry.id)
+      .map((e) => e.content)
+      .join(". ")
+    const existingMemory = semanticMemory
+      ? `Известные факты: ${(semanticMemory.facts || []).join("; ")}. Цели: ${(semanticMemory.goals || []).join("; ")}.`
+      : ""
+    const context = `${existingMemory}\nЗаписи сегодня: ${existingEntries || "нет"}\nНовая запись: ${content.trim()}`
+
+    extractSemanticMemory(context, "", "").then((extracted) => {
+      if (!isMounted.current) return
       const hasNew = (extracted.facts?.length || 0) + (extracted.goals?.length || 0) + (extracted.preferences?.length || 0) + (extracted.projects?.length || 0)
       if (hasNew > 0) {
         setSemanticMemory({
-          facts: [...new Set([...semanticMemory.facts, ...(extracted.facts || [])])],
-          goals: [...new Set([...semanticMemory.goals, ...(extracted.goals || [])])],
-          preferences: [...new Set([...semanticMemory.preferences, ...(extracted.preferences || [])])],
-          projects: [...new Set([...semanticMemory.projects, ...(extracted.projects || [])])],
+          facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])],
+          goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])],
+          preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])],
+          projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])],
           lastUpdated: new Date().toISOString(),
         })
       }

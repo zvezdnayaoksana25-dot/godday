@@ -97,6 +97,20 @@ const StatsPage = () => {
 
   const maxTasks = Math.max(...last7DaysData.map((d) => d.total), 1)
 
+  const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+  const dayBreakdown: Record<string, { total: number; completed: number }> = {}
+  tasks.forEach((t) => {
+    if (!t.dueDate) return
+    const d = new Date(t.dueDate + "T00:00:00")
+    const dayName = dayNames[d.getDay()]
+    if (!dayBreakdown[dayName]) dayBreakdown[dayName] = { total: 0, completed: 0 }
+    dayBreakdown[dayName].total++
+    if (t.status === "done") dayBreakdown[dayName].completed++
+  })
+  const dailyBreakdownStr = Object.entries(dayBreakdown)
+    .map(([day, s]) => `${day}: ${s.completed}/${s.total}`)
+    .join(", ") || "нет данных"
+
   const handleGenerateStats = async () => {
     if (!settings.groqApiKey) return
     setIsLoading(true)
@@ -120,6 +134,7 @@ const StatsPage = () => {
         getPatternsSummary(),
         recentSummariesStr,
         diaryEntriesStr,
+        dailyBreakdownStr,
       )
       saveAIStats(JSON.stringify(result))
     } catch (e: any) {

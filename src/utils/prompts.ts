@@ -242,6 +242,7 @@ export const AI_STATS_PROMPT = (
   patternsSummary: string,
   recentDailySummaries: string,
   diaryEntries: string,
+  dailyBreakdown: string,
 ) => `Ты — аналитик продуктивности. Проанализируй данные.
 
 Данные:
@@ -253,6 +254,7 @@ export const AI_STATS_PROMPT = (
 - Паттерны: ${patternsSummary}
 - Саммаризации: ${recentDailySummaries || "нет"}
 - Дневник: ${diaryEntries || "нет"}
+- По дням недели: ${dailyBreakdown}
 
 Ответь JSON:
 {
