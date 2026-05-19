@@ -235,6 +235,7 @@ const SettingsPage = () => {
       }
 
       let weeklyData = ""
+      let diaryEntries = ""
       for (const w of weeks) {
         const days = eachDayOfInterval({ start: w.start, end: w.end })
         let totalTasks = 0
@@ -244,6 +245,10 @@ const SettingsPage = () => {
           const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
           totalTasks += dayTasks.length
           totalCompleted += dayTasks.filter((t) => t.status === "done").length
+          const entries = getDiaryEntriesForPeriod(dateStr)
+          if (entries !== "нет записей в дневнике") {
+            diaryEntries += `${dateStr}: ${entries}\n\n`
+          }
         }
         weeklyData += `Неделя ${format(w.start, "dd.MM")}–${format(w.end, "dd.MM")}: задач ${totalTasks}, выполнено ${totalCompleted}\n`
       }
@@ -252,6 +257,7 @@ const SettingsPage = () => {
         format(now, "MMMM yyyy"),
         weeklyData,
         getPatternsSummary(),
+        diaryEntries,
       )
 
       const monthKey = getMonthKey(now)

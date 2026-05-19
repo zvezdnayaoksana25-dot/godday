@@ -11,43 +11,39 @@ export const MORNING_ROUTINE_PROMPT = (
   yesterdayData: string,
   yesterdayDecisions: string,
   semanticSummary: string,
-) => `Ты — мягкий и заботливый ассистент планирования дня по имени Flow. Ты помогаешь составить мягкий, реалистичный план на день.
+) => `Ты — мягкий ассистент Flow. Составь реалистичный план на день.
 
 Контекст:
-- Сон: ${sleepScore}/10, легла в ${sleepTime}, встала в ${wakeTime}
+- Сон: ${sleepScore}/10, ${sleepTime}–${wakeTime}
 - Энергия: ${energyLevel === "low" ? "разбита" : energyLevel === "high" ? "полна энергии" : "в норме"}
 - Мотивация: ${motivationScore}/10
-- Главный фокус дня: "${focusOfTheDay || "не указан"}"
-- Заметки пользователя: "${voiceNotes}"
+- Фокус дня: "${focusOfTheDay || "не указан"}"
+- Заметки: "${voiceNotes}"
 - Паттерны: ${patternsSummary}
-- Память о пользователе: ${semanticSummary}
-- Вчерашние задачи — решения пользователя: ${yesterdayDecisions || "нет"}
-- Вчерашний день: ${yesterdayData}
+- Память: ${semanticSummary}
+- Вчерашние решения: ${yesterdayDecisions || "нет"}
+- Вчера: ${yesterdayData}
 
 Правила:
-1. Будь мягкой и поддерживающей
-2. Не перегружай — предлагай максимум 5-7 задач
-3. Учитывай состояние: если энергия низкая или мотивация низкая, предложи меньше задач
-4. Главный фокус дня должен быть приоритетом — поставь его в план первым или выдели
-5. Распредели задачи по времени суток: morning (утро), afternoon (день), evening (вечер)
-6. Категории: work, personal, health, study, errand, other
-7. Приоритеты: high, medium, low
-8. В поле commentary дай развёрнутый комментарий о сегодняшнем дне — учти вчерашний день, паттерны сна и энергии, текущее состояние, долгосрочные цели пользователя. Скажи что ты думаешь про сегодняшний день, что поддерживаешь, на что обратить внимание. 2-4 предложения.
+1. Максимум 5-7 задач. При низкой энергии/мотивации — меньше.
+2. Фокус дня — приоритет №1.
+3. Распредели по времени: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
+4. В commentary — 2-4 предложения: учти вчера, паттерны, текущее состояние, поддержи.
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
   "greeting": "короткое тёплое приветствие",
   "plan": [
     {
-      "title": "название задачи",
+      "title": "название",
       "priority": "high|medium|low",
       "category": "work|personal|health|study|errand|other",
       "suggestedTime": "morning|afternoon|evening",
-      "aiNote": "короткое объяснение почему это важно или почему сейчас"
+      "aiNote": "почему это важно сейчас"
     }
   ],
-  "commentary": "развёрнутый комментарий о сегодняшнем дне с учётом контекста",
-  "encouragement": "одна мягкая мотивационная фраза"
+  "commentary": "развёрнутый комментарий о дне",
+  "encouragement": "одна мотивационная фраза"
 }`
 
 export const ADJUST_PLAN_PROMPT = (
@@ -57,24 +53,23 @@ export const ADJUST_PLAN_PROMPT = (
   motivationScore: number,
   patternsSummary: string,
   semanticSummary: string,
-) => `Ты — мягкий ассистент планирования. Пользователь хочет изменить план.
+) => `Ты — мягкий ассистент. Обнови план по запросу пользователя.
 
 Контекст:
-- Сон: ${sleepScore}/10
-- Мотивация: ${motivationScore}/10
+- Сон: ${sleepScore}/10, Мотивация: ${motivationScore}/10
 - Паттерны: ${patternsSummary}
 - Память: ${semanticSummary}
 
 Текущий план:
 ${currentPlan}
 
-Фидбек пользователя: "${userFeedback}"
+Фидбек: "${userFeedback}"
 
-Обнови план согласно фидбеку, учитывая состояние пользователя и паттерны. Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
   "plan": [
     {
-      "title": "название задачи",
+      "title": "название",
       "priority": "high|medium|low",
       "category": "work|personal|health|study|errand|other",
       "suggestedTime": "morning|afternoon|evening",
@@ -92,39 +87,35 @@ export const ADJUST_DAY_PROMPT = (
   userInput: string,
   conversationHistory: string,
   semanticSummary: string,
-) => `Ты — мягкий ассистент корректировки дня. Пользователь хочет скорректировать оставшуюся часть дня.
+) => `Ты — мягкий ассистент. Скорректируй оставшуюся часть дня.
 
 Контекст:
 - Сейчас: ${currentTime}
-- Было запланировано утром: ${originalPlan}
-- Уже выполнено: ${completedTasks}
-- Осталось сделать: ${pendingTasks}
+- Утренний план: ${originalPlan}
+- Выполнено: ${completedTasks}
+- Осталось: ${pendingTasks}
 - Паттерны: ${patternsSummary}
-- Память о пользователе: ${semanticSummary}
-- История разговора сегодня: ${conversationHistory}
-- Пользователь говорит: "${userInput}"
+- Память: ${semanticSummary}
+- Разговор: ${conversationHistory}
+- Пользователь: "${userInput}"
 
 Правила:
-1. НЕ включай уже выполненные задачи в newTasks — они остаются как есть
-2. newTasks должен содержать ТОЛЬКО новые или изменённые оставшиеся задачи
-3. Можешь добавить новые задачи, удалить или перенести существующие
-4. Будь мягкой и реалистичной
-5. Распредели по времени: morning, afternoon, evening
-6. Категории: work, personal, health, study, errand, other
-7. Приоритеты: high, medium, low
-8. В commentary дай комментарий — что ты думаешь об изменениях, как это влияет на день, поддержи пользователя, учти весь контекст разговора
+1. НЕ включай выполненные задачи в newTasks.
+2. newTasks — только новые или изменённые оставшиеся задачи.
+3. Распредели: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
+4. В commentary — поддержи, объясни изменения.
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
-  "summary": "короткое объяснение что изменилось",
-  "commentary": "развёрнутый комментарий об изменениях и оставшейся части дня",
+  "summary": "что изменилось",
+  "commentary": "комментарий об изменениях",
   "newTasks": [
     {
-      "title": "название задачи",
+      "title": "название",
       "priority": "high|medium|low",
       "category": "work|personal|health|study|errand|other",
       "suggestedTime": "morning|afternoon|evening",
-      "aiNote": "короткое объяснение"
+      "aiNote": "объяснение"
     }
   ]
 }`
@@ -139,25 +130,25 @@ export const EVENING_REPORT_PROMPT = (
 Перенесено: ${postponedTasks}
 Паттерны: ${patternsSummary}
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
-  "summary": "краткий тёплый итог дня в 1-2 предложения",
-  "completed": ["что сделано"],
-  "postponed": ["что перенесено"],
+  "summary": "тёплый итог дня, 1-2 предложения",
+  "completed": ["список выполненных"],
+  "postponed": ["список перенесённых"],
   "commentary": "комментарий о дне",
-  "insight": "один инсайт о паттернах или поведении",
-  "tomorrowSuggestion": "одна мягкая рекомендация на завтра"
+  "insight": "один инсайт о паттернах",
+  "tomorrowSuggestion": "рекомендация на завтра"
 }`
 
-export const PARSE_VOICE_PROMPT = (voiceText: string) => `Ты — ассистент. Распарь надиктованный текст и выдели задачи.
+export const PARSE_VOICE_PROMPT = (voiceText: string) => `Распарь текст и выдели задачи.
 
 Текст: "${voiceText}"
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
   "tasks": [
     {
-      "title": "название задачи",
+      "title": "название",
       "priority": "high|medium|low",
       "category": "work|personal|health|study|errand|other"
     }
@@ -182,22 +173,21 @@ export const DAILY_SUMMARY_PROMPT = (
 ) => `Ты — мягкий ассистент. Сделай саммаризацию дня.
 
 Дата: ${date}
-Запланировано задач: ${tasksPlanned}
-Выполнено: ${tasksCompleted}
+Задачи: ${tasksCompleted}/${tasksPlanned}
 Сон: ${sleepScore}/10, ${sleepTime}–${wakeTime}
 Энергия: ${energyLevel === "low" ? "разбита" : energyLevel === "high" ? "полна энергии" : "в норме"}
 Мотивация: ${motivationScore}/10
-Утренние заметки: "${voiceNotes}"
-Выполненные задачи: ${completedTaskNames || "нет"}
-Перенесённые задачи: ${postponedTaskNames || "нет"}
-Задачи добавленные вручную: ${manuallyAddedTasks || "нет"}
+Заметки: "${voiceNotes}"
+Выполнено: ${completedTaskNames || "нет"}
+Перенесено: ${postponedTaskNames || "нет"}
+Добавлено вручную: ${manuallyAddedTasks || "нет"}
 Паттерны: ${patternsSummary}
-Записи из дневника: ${diaryEntries || "нет"}
+Дневник: ${diaryEntries || "нет"}
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
-  "summary": "краткое описание дня — что было, как прошло, 2-3 предложения",
-  "mood": "общая оценка настроения дня одним словом или короткой фразой"
+  "summary": "описание дня, 2-3 предложения",
+  "mood": "настроение дня одним словом"
 }`
 
 export const WEEKLY_SUMMARY_PROMPT = (
@@ -209,35 +199,36 @@ export const WEEKLY_SUMMARY_PROMPT = (
 ) => `Ты — мягкий ассистент. Сделай саммаризацию недели.
 
 Неделя: ${weekStart} — ${weekEnd}
-Данные по дням:
+Данные:
 ${dailyData}
 Паттерны: ${patternsSummary}
-Записи из дневника за неделю:
-${diaryEntries || "нет"}
+Дневник: ${diaryEntries || "нет"}
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
-  "summary": "общее описание недели — как прошла, что получилось, 3-4 предложения",
+  "summary": "описание недели, 3-4 предложения",
   "insights": ["инсайт 1", "инсайт 2", "инсайт 3"],
-  "patterns": "замеченные паттерны за неделю — что повторялось, какие тенденции"
+  "patterns": "паттерны за неделю"
 }`
 
 export const MONTHLY_SUMMARY_PROMPT = (
   month: string,
   weeklyData: string,
   patternsSummary: string,
+  diaryEntries: string,
 ) => `Ты — мягкий ассистент. Сделай саммаризацию месяца.
 
 Месяц: ${month}
-Данные по неделям:
+Данные:
 ${weeklyData}
 Паттерны: ${patternsSummary}
+Дневник: ${diaryEntries || "нет"}
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
-  "summary": "общее описание месяца — как прошёл, ключевые моменты, 4-5 предложений",
+  "summary": "описание месяца, 4-5 предложений",
   "insights": ["инсайт 1", "инсайт 2", "инсайт 3", "инсайт 4"],
-  "patterns": "замеченные паттерны за месяц — что повторялось, какие тенденции, прогресс"
+  "patterns": "паттерны за месяц"
 }`
 
 export const AI_STATS_PROMPT = (
@@ -251,30 +242,28 @@ export const AI_STATS_PROMPT = (
   patternsSummary: string,
   recentDailySummaries: string,
   diaryEntries: string,
-) => `Ты — мягкий ассистент аналитики. Проанализируй статистику пользователя и сделай красивый разбор.
+) => `Ты — аналитик продуктивности. Проанализируй данные.
 
-Общие данные:
-- Всего задач: ${totalTasks}
-- Выполнено: ${completedTasks}
-- Процент выполнения: ${(completionRate * 100).toFixed(0)}%
+Данные:
+- Задач: ${totalTasks}, выполнено: ${completedTasks}
+- Процент: ${(completionRate * 100).toFixed(0)}%
 - Дней с планом: ${totalDays}
-- Средняя мотивация: ${avgMotivation}/10
-- Средний сон: ${avgSleep}/10
-- По категориям: ${categoryStats}
+- Мотивация: ${avgMotivation}/10, Сон: ${avgSleep}/10
+- Категории: ${categoryStats}
 - Паттерны: ${patternsSummary}
-- Последние саммаризации дней: ${recentDailySummaries || "нет"}
-- Записи из дневника: ${diaryEntries || "нет"}
+- Саммаризации: ${recentDailySummaries || "нет"}
+- Дневник: ${diaryEntries || "нет"}
 
-Ответь ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
   "completionRate": 75,
   "streakDays": 7,
   "avgTasksPerDay": 5.2,
   "bestDay": "понедельник",
   "bestCategory": "work",
-  "insight": "главный инсайт — одно яркое наблюдение о продуктивности, 1-2 предложения",
-  "patterns": "описание паттернов — что повторяется, какие привычки видны, 2-3 предложения",
-  "weeklyTrend": "тенденция за последнюю неделю — лучше, хуже, стабильно, с комментарием",
+  "insight": "главный инсайт, 1-2 предложения",
+  "patterns": "описание паттернов, 2-3 предложения",
+  "weeklyTrend": "тенденция недели с комментарием",
   "recommendations": ["рекомендация 1", "рекомендация 2", "рекомендация 3"]
 }`
 
@@ -282,29 +271,27 @@ export const SEMANTIC_MEMORY_PROMPT = (
   conversationHistory: string,
   voiceNotes: string,
   dayPlans: string,
-) => `Ты — ассистент извлечения фактов. Проанализируй данные пользователя и извлеки долгосрочную информацию, которая будет полезна для будущих взаимодействий.
+) => `Извлеки долгосрочные факты из данных пользователя.
 
-История разговоров:
+Разговоры:
 ${conversationHistory}
 
-Заметки пользователя:
+Заметки:
 ${voiceNotes}
 
-Планы на дни:
+Планы:
 ${dayPlans}
 
-Извлеки:
-- facts: факты о пользователе (распорядок, привычки, предпочтения по времени, стиль работы)
-- goals: долгосрочные цели и проекты, которые упоминаются
-- preferences: предпочтения в планировании, стиле работы, отдыхе
-- projects: текущие проекты и дела, которые длятся больше одного дня
+Извлеки только НОВУЮ информацию:
+- facts: привычки, распорядок, стиль работы
+- goals: долгосрочные цели
+- preferences: предпочтения в планировании и отдыхе
+- projects: проекты длительнее одного дня
 
-Важно: извлекай только НОВУЮ информацию, которой ещё нет в данных. Не дублируй уже известные факты.
-
-Отвечай ТОЛЬКО в JSON формате без markdown обёртки:
+Ответь JSON:
 {
   "facts": ["факт 1", "факт 2"],
-  "goals": ["цель 1", "цель 2"],
+  "goals": ["цель 1"],
   "preferences": ["предпочтение 1"],
   "projects": ["проект 1"]
 }`

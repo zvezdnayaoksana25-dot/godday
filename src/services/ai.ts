@@ -275,8 +275,9 @@ export async function generateMonthlySummary(
   month: string,
   weeklyData: string,
   patternsSummary: string,
+  diaryEntries: string,
 ): Promise<PeriodSummary> {
-  const prompt = MONTHLY_SUMMARY_PROMPT(month, weeklyData, patternsSummary)
+  const prompt = MONTHLY_SUMMARY_PROMPT(month, weeklyData, patternsSummary, diaryEntries)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ summary: string; insights: string[]; patterns: string }>(raw)
