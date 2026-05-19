@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react"
 import { format, subDays, eachDayOfInterval } from "date-fns"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import TabBar from "@/components/layout/TabBar"
 import { useStore } from "@/store/useStore"
 import { generateAIStats } from "@/services/ai"
-import { BarChart3, TrendingUp, Calendar, Sparkles, Target, Award, Zap, Lightbulb, Loader2, RefreshCw } from "lucide-react"
+import { BarChart3, TrendingUp, Calendar, Sparkles, Target, Award, Zap, Lightbulb, Loader2, RefreshCw, ArrowLeft } from "lucide-react"
 
 const categoryEmojis: Record<string, string> = {
   work: "💼",
@@ -27,6 +28,7 @@ const categoryLabels: Record<string, string> = {
 }
 
 const StatsPage = () => {
+  const navigate = useNavigate()
   const tasks = useStore((s) => s.tasks)
   const patterns = useStore((s) => s.patterns)
   const dayPlans = useStore((s) => s.dayPlans)
@@ -147,8 +149,14 @@ const StatsPage = () => {
     <>
       <div className="min-h-screen bg-background pb-24">
         <div className="px-5 pt-12 pb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Статистика</h1>
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => navigate("/settings")}
+              className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="text-2xl font-semibold flex-1">Статистика</h1>
             {settings.groqApiKey && (
               <button
                 onClick={handleGenerateStats}
