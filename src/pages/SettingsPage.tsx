@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from "date-fns"
 import { useNavigate } from "react-router-dom"
-import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2, CalendarDays, CalendarRange, Calendar, Brain, Plus, Trash } from "lucide-react"
+import { Eye, EyeOff, Check, X, Loader2, Moon, Sun, Download, Upload, Trash2, CalendarDays, CalendarRange, Calendar, Brain, Plus, Trash, BarChart3 } from "lucide-react"
 import TabBar from "@/components/layout/TabBar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -148,6 +148,9 @@ const SettingsPage = () => {
         dayTasks.length,
         completed.length,
         dayPlan?.sleepScore || 0,
+        dayPlan?.sleepTime || "23:00",
+        dayPlan?.wakeTime || "07:00",
+        dayPlan?.energyLevel || "medium",
         dayPlan?.motivationScore || 0,
         dayPlan?.voiceNotes || "",
         completed.map((t) => t.title).join(", "),
@@ -281,6 +284,22 @@ const SettingsPage = () => {
                     onChange={(e) => updateSettings({ name: e.target.value })}
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate("/stats")}
+            >
+              <CardContent className="flex items-center gap-3 py-4">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Статистика</p>
+                  <p className="text-xs text-muted-foreground">AI-анализ, тренды и рекомендации</p>
+                </div>
+                <span className="text-muted-foreground text-sm">→</span>
               </CardContent>
             </Card>
 

@@ -1,16 +1,17 @@
 import { useState, useCallback, useRef } from "react"
 import { motion } from "framer-motion"
 import { format, subDays } from "date-fns"
-import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2 } from "lucide-react"
+import { Mic, MicOff, Sparkles, Check, ArrowRight, ArrowLeft, X, Loader2, ChevronUp, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useStore } from "@/store/useStore"
-import { generateMorningPlan, adjustPlan, extractSemanticMemory as extractSemanticMemoryAI } from "@/services/ai"
+import { generateMorningPlan, adjustPlan } from "@/services/ai"
 import { sendMorningPlan } from "@/services/telegram"
 import { startSpeechRecognition, isSpeechSupported } from "@/services/speech"
-import type { DayPlanTask, MorningSession, Task, AIConversationMessage } from "@/types"
+import type { DayPlanTask, MorningSession, Task, AIConversationMessage, EnergyLevel } from "@/types"
 import { v4 as uuidv4 } from "uuid"
 
 const timeBlockLabels: Record<string, string> = {
@@ -31,6 +32,15 @@ const priorityLabels: Record<string, string> = {
   low: "Можно позже",
 }
 
+const energyOptions: { level: EnergyLevel; emoji: string; label: string }[] = [
+  { level: "low", emoji: "🔋", label: "Разбита" },
+  { level: "medium", emoji: "⚡", label: "Нормально" },
+  { level: "high", emoji: "🚀", label: "Полна энергии" },
+]
+
+const hours = Array.from({ length: 24 }, (_, i) => i)
+const minutes = ["00", "15", "30", "45"]
+
 interface MorningRoutineProps {
   onComplete: () => void
 }
@@ -39,8 +49,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const morningSession = useStore((s) => s.morningSession)
   const setMorningStep = useStore((s) => s.setMorningStep)
   const setSleepScore = useStore((s) => s.setSleepScore)
+  const setSleepTime = useStore((s) => s.setSleepTime)
+  const setWakeTime = useStore((s) => s.setWakeTime)
+  const setEnergyLevel = useStore((s) => s.setEnergyLevel)
   const setMotivationScore = useStore((s) => s.setMotivationScore)
   const setVoiceNotes = useStore((s) => s.setVoiceNotes)
+  const setFocusOfTheDay = useStore((s) => s.setFocusOfTheDay)
+  const setYesterdayTaskDecisions = useStore((s) => s.setYesterdayTaskDecisions)
   const setAIPlan = useStore((s) => s.setAIPlan)
   const setAILoading = useStore((s) => s.setAILoading)
   const setAIError = useStore((s) => s.setAIError)
@@ -58,11 +73,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const getSemanticSummary = useStore((s) => s.getSemanticSummary)
   const semanticMemory = useStore((s) => s.semanticMemory)
   const setSemanticMemory = useStore((s) => s.setSemanticMemory)
+  const deleteTask = useStore((s) => s.deleteTask)
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
   const [adjustInput, setAdjustInput] = useState("")
   const [isAdjusting, setIsAdjusting] = useState(false)
+  const [expandedYesterday, setExpandedYesterday] = useState(false)
   const isCompleting = useRef(false)
 
   const today = format(new Date(), "yyyy-MM-dd")
@@ -76,7 +93,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     : "Плана не было"
 
   const handleNext = useCallback(() => {
-    const stepOrder: MorningSession["step"][] = ["sleep", "motivation", "voice", "plan", "done"]
+    const stepOrder: MorningSession["step"][] = ["sleep", "energy", "yesterday", "voice", "plan", "done"]
     const currentIndex = stepOrder.indexOf(morningSession.step)
     if (currentIndex < stepOrder.length - 1) {
       setMorningStep(stepOrder[currentIndex + 1])
@@ -84,7 +101,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   }, [morningSession.step, setMorningStep])
 
   const handleBack = useCallback(() => {
-    const stepOrder: MorningSession["step"][] = ["sleep", "motivation", "voice", "plan", "done"]
+    const stepOrder: MorningSession["step"][] = ["sleep", "energy", "yesterday", "voice", "plan", "done"]
     const currentIndex = stepOrder.indexOf(morningSession.step)
     if (currentIndex > 0) {
       setMorningStep(stepOrder[currentIndex - 1])
@@ -101,19 +118,34 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         .map((t) => `- ${t.title} (${t.priority})`)
         .join("\n") || "нет"
 
+      const decisions = Object.entries(morningSession.yesterdayTaskDecisions)
+        .map(([id, action]) => {
+          const task = yesterdayTasks.find((t) => t.id === id)
+          if (!task) return null
+          const actionLabel = action === "move" ? "перенести" : action === "delete" ? "удалить" : "позже"
+          return `${task.title} → ${actionLabel}`
+        })
+        .filter(Boolean)
+        .join(", ") || "нет решений"
+
       const result = await generateMorningPlan(
         morningSession.sleepScore,
+        morningSession.sleepTime,
+        morningSession.wakeTime,
+        morningSession.energyLevel,
         morningSession.motivationScore,
         voiceInput || morningSession.voiceNotes,
+        morningSession.focusOfTheDay,
         getPatternsSummary(),
         pendingTasks,
         yesterdayData,
+        decisions,
         getSemanticSummary(),
       )
 
       const userMsg: AIConversationMessage = {
         role: "user",
-        content: voiceInput || morningSession.voiceNotes,
+        content: `Сон: ${morningSession.sleepScore}/10, ${morningSession.sleepTime}–${morningSession.wakeTime}. Энергия: ${morningSession.energyLevel}. Фокус: ${morningSession.focusOfTheDay || "не указан"}. Заметки: ${voiceInput || morningSession.voiceNotes}`,
         timestamp: new Date().toISOString(),
       }
       const aiMsg: AIConversationMessage = {
@@ -138,6 +170,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     if (isCompleting.current) return
     isCompleting.current = true
 
+    const decisions = morningSession.yesterdayTaskDecisions
+    Object.entries(decisions).forEach(([id, action]) => {
+      if (action === "delete") {
+        deleteTask(id)
+      }
+    })
+
     const newTasks: Task[] = morningSession.aiPlan.map((task: DayPlanTask, i: number) => ({
       id: uuidv4(),
       title: task.title,
@@ -158,8 +197,12 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       date: today,
       taskIds: newTasks.map((t) => t.id),
       sleepScore: morningSession.sleepScore,
+      sleepTime: morningSession.sleepTime,
+      wakeTime: morningSession.wakeTime,
+      energyLevel: morningSession.energyLevel,
       motivationScore: morningSession.motivationScore,
       voiceNotes: voiceInput,
+      focusOfTheDay: morningSession.focusOfTheDay,
       aiSummary: morningSession.aiGreeting,
       aiCommentary: morningSession.aiCommentary,
       completed: false,
@@ -167,30 +210,25 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     }
     saveDayPlan(plan)
 
+    const movedTasks = Object.entries(decisions)
+      .filter(([, action]) => action === "move")
+      .map(([id]) => yesterdayTasks.find((t) => t.id === id))
+      .filter(Boolean) as Task[]
+
     recordDayData(
       morningSession.sleepScore,
+      morningSession.sleepTime,
+      morningSession.wakeTime,
+      morningSession.energyLevel,
       morningSession.motivationScore,
-      newTasks.length,
+      newTasks.length + movedTasks.length,
       0,
       patterns.frequentlyPostponedCategories,
     )
 
-    const history = getConversationHistoryForExtraction()
-    if (history) {
-      extractSemanticMemoryAI(
-        history.conversation,
-        voiceInput,
-        JSON.stringify(morningSession.aiPlan),
-      ).then((extracted) => {
-        const current = useStore.getState().semanticMemory
-        setSemanticMemory({
-          facts: [...new Set([...current.facts, ...(extracted.facts || [])])],
-          goals: [...new Set([...current.goals, ...(extracted.goals || [])])],
-          preferences: [...new Set([...current.preferences, ...(extracted.preferences || [])])],
-          projects: [...new Set([...current.projects, ...(extracted.projects || [])])],
-          lastUpdated: new Date().toISOString(),
-        })
-      }).catch(() => {})
+    const history = getConversationHistory(today)
+    if (history.length > 0) {
+      extractSemanticMemoryForSave()
     }
 
     const planText = morningSession.aiPlan
@@ -204,6 +242,25 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
 
     resetMorningSession()
     onComplete()
+  }
+
+  const extractSemanticMemoryForSave = () => {
+    import("@/services/ai").then(({ extractSemanticMemory }) => {
+      const history = getConversationHistory(today)
+      const conversation = history.map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`).join("\n\n")
+      extractSemanticMemory(conversation, voiceInput, JSON.stringify(morningSession.aiPlan)).then((extracted) => {
+        const hasNew = (extracted.facts?.length || 0) + (extracted.goals?.length || 0) + (extracted.preferences?.length || 0) + (extracted.projects?.length || 0)
+        if (hasNew > 0) {
+          setSemanticMemory({
+            facts: [...new Set([...semanticMemory.facts, ...(extracted.facts || [])])],
+            goals: [...new Set([...semanticMemory.goals, ...(extracted.goals || [])])],
+            preferences: [...new Set([...semanticMemory.preferences, ...(extracted.preferences || [])])],
+            projects: [...new Set([...semanticMemory.projects, ...(extracted.projects || [])])],
+            lastUpdated: new Date().toISOString(),
+          })
+        }
+      }).catch(() => {})
+    })
   }
 
   const handleAdjustPlan = async () => {
@@ -241,16 +298,6 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     }
   }
 
-  const getConversationHistoryForExtraction = () => {
-    const history = getConversationHistory(today)
-    if (history.length === 0) return null
-    return {
-      conversation: history
-        .map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`)
-        .join("\n\n"),
-    }
-  }
-
   const toggleListening = () => {
     if (isListening) {
       setIsListening(false)
@@ -283,6 +330,60 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     }, 15000)
   }
 
+  const renderTimePicker = (label: string, value: string, onChange: (time: string) => void) => {
+    const [h, m] = value.split(":").map(Number)
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-center">{label}</p>
+        <div className="flex justify-center gap-4">
+          <div className="space-y-2">
+            <button
+              onClick={() => onChange(`${String((h + 1) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`)}
+              className="w-14 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-semibold">
+              {String(h).padStart(2, "0")}
+            </div>
+            <button
+              onClick={() => onChange(`${String((h - 1 + 24) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`)}
+              className="w-14 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex items-center text-2xl font-semibold">:</div>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                const idx = minutes.indexOf(String(m).padStart(2, "0"))
+                const nextM = minutes[(idx + 1) % minutes.length]
+                onChange(`${String(h).padStart(2, "0")}:${nextM}`)
+              }}
+              className="w-14 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-xl font-semibold">
+              {String(m).padStart(2, "0")}
+            </div>
+            <button
+              onClick={() => {
+                const idx = minutes.indexOf(String(m).padStart(2, "0"))
+                const prevM = minutes[(idx - 1 + minutes.length) % minutes.length]
+                onChange(`${String(h).padStart(2, "0")}:${prevM}`)
+              }}
+              className="w-14 h-10 rounded-xl bg-muted flex items-center justify-center hover:bg-accent transition-colors"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const renderStep = () => {
     switch (morningSession.step) {
       case "sleep":
@@ -290,23 +391,33 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
           <div className="space-y-8">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-semibold">Как спала?</h2>
-              <p className="text-muted-foreground">Оцени от 1 до 10</p>
+              <p className="text-muted-foreground">Оцени качество и время сна</p>
             </div>
-            <div className="grid grid-cols-5 gap-3 max-w-sm mx-auto">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setSleepScore(n)}
-                  className={`h-14 rounded-2xl text-lg font-medium transition-all active:scale-95 ${
-                    morningSession.sleepScore === n
-                      ? "bg-primary text-primary-foreground shadow-glow"
-                      : "bg-card border border-border hover:border-primary/50"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+
+            <div>
+              <p className="text-sm font-medium text-center mb-3">Качество сна</p>
+              <div className="grid grid-cols-5 gap-3 max-w-sm mx-auto">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setSleepScore(n)}
+                    className={`h-14 rounded-2xl text-lg font-medium transition-all active:scale-95 ${
+                      morningSession.sleepScore === n
+                        ? "bg-primary text-primary-foreground shadow-glow"
+                        : "bg-card border border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div className="flex justify-center gap-8">
+              {renderTimePicker("Легла в", morningSession.sleepTime, setSleepTime)}
+              {renderTimePicker("Встала в", morningSession.wakeTime, setWakeTime)}
+            </div>
+
             <div className="flex justify-end">
               <Button onClick={handleNext} disabled={morningSession.sleepScore === 0} size="lg">
                 Далее <ArrowRight className="ml-2 h-4 w-4" />
@@ -315,25 +426,26 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
           </div>
         )
 
-      case "motivation":
+      case "energy":
         return (
           <div className="space-y-8">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold">Как настроение и мотивация?</h2>
-              <p className="text-muted-foreground">Оцени от 1 до 10</p>
+              <h2 className="text-2xl font-semibold">Как энергия?</h2>
+              <p className="text-muted-foreground">Физическое состояние прямо сейчас</p>
             </div>
-            <div className="grid grid-cols-5 gap-3 max-w-sm mx-auto">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <div className="space-y-3 max-w-sm mx-auto">
+              {energyOptions.map((opt) => (
                 <button
-                  key={n}
-                  onClick={() => setMotivationScore(n)}
-                  className={`h-14 rounded-2xl text-lg font-medium transition-all active:scale-95 ${
-                    morningSession.motivationScore === n
+                  key={opt.level}
+                  onClick={() => setEnergyLevel(opt.level)}
+                  className={`w-full h-16 rounded-2xl text-lg font-medium transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                    morningSession.energyLevel === opt.level
                       ? "bg-primary text-primary-foreground shadow-glow"
                       : "bg-card border border-border hover:border-primary/50"
                   }`}
                 >
-                  {n}
+                  <span className="text-2xl">{opt.emoji}</span>
+                  <span>{opt.label}</span>
                 </button>
               ))}
             </div>
@@ -341,7 +453,78 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
               <Button variant="ghost" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Назад
               </Button>
-              <Button onClick={handleNext} disabled={morningSession.motivationScore === 0} size="lg">
+              <Button onClick={handleNext} size="lg">
+                Далее <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )
+
+      case "yesterday":
+        return (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-semibold">Вчерашние задачи</h2>
+              <p className="text-muted-foreground">Что делать с незавершёнными?</p>
+            </div>
+
+            {yesterdayPending.length > 0 ? (
+              <div className="space-y-2">
+                {yesterdayPending.map((task) => {
+                  const decision = morningSession.yesterdayTaskDecisions[task.id]
+                  return (
+                    <Card key={task.id} className="p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium flex-1">{task.title}</span>
+                        <div className="flex gap-1 ml-2">
+                          <button
+                            onClick={() => {
+                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "move" as const }
+                              setYesterdayTaskDecisions(decisions)
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              decision === "move" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            Перенести
+                          </button>
+                          <button
+                            onClick={() => {
+                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "later" as const }
+                              setYesterdayTaskDecisions(decisions)
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              decision === "later" ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            Позже
+                          </button>
+                          <button
+                            onClick={() => {
+                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "delete" as const }
+                              setYesterdayTaskDecisions(decisions)
+                            }}
+                            className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              decision === "delete" ? "bg-destructive text-white" : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-4">Нет незавершённых задач</p>
+            )}
+
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={handleBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Назад
+              </Button>
+              <Button onClick={handleNext} size="lg">
                 Далее <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -359,8 +542,19 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
               placeholder="Хочу закончить проект, сходить на прогулку..."
               value={voiceInput}
               onChange={(e) => setVoiceInput(e.target.value)}
-              className="min-h-[150px]"
+              className="min-h-[100px]"
             />
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-center">Главный фокус дня</p>
+              <Input
+                placeholder="Самое важное сегодня..."
+                value={morningSession.focusOfTheDay}
+                onChange={(e) => setFocusOfTheDay(e.target.value)}
+                className="h-12"
+              />
+            </div>
+
             {isSpeechSupported() && (
               <div className="flex justify-center">
                 <Button
@@ -518,13 +712,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
             <X className="h-5 w-5" />
           </button>
           <div className="flex gap-1.5">
-            {(["sleep", "motivation", "voice", "plan"] as const).map((step, i) => {
-              const stepOrder = ["sleep", "motivation", "voice", "plan", "done"]
+            {(["sleep", "energy", "yesterday", "voice", "plan"] as const).map((step, i) => {
+              const stepOrder = ["sleep", "energy", "yesterday", "voice", "plan", "done"]
               const currentIdx = stepOrder.indexOf(morningSession.step)
               return (
                 <div
                   key={step}
-                  className={`h-1.5 w-8 rounded-full transition-all ${
+                  className={`h-1.5 w-6 rounded-full transition-all ${
                     i < currentIdx
                       ? "bg-primary"
                       : i === currentIdx

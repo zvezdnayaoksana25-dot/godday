@@ -19,12 +19,18 @@ export interface Task {
   order: number
 }
 
+export type EnergyLevel = "low" | "medium" | "high"
+
 export interface DayPlan {
   date: string
   taskIds: string[]
   sleepScore: number
+  sleepTime: string
+  wakeTime: string
+  energyLevel: EnergyLevel
   motivationScore: number
   voiceNotes: string
+  focusOfTheDay: string
   aiSummary: string
   aiCommentary: string
   completed: boolean
@@ -56,9 +62,11 @@ export interface Patterns {
   avgStartTime: number
   avgTasksPerDay: number
   avgCompletionRate: number
+  avgSleepDuration: number
   frequentlyPostponedCategories: Category[]
   motivationHistory: { date: string; score: number }[]
-  sleepHistory: { date: string; score: number }[]
+  sleepHistory: { date: string; score: number; duration: number; sleepTime: string; wakeTime: string }[]
+  energyHistory: { date: string; level: EnergyLevel }[]
   lastUpdated: string
 }
 
@@ -72,10 +80,15 @@ export interface Settings {
 }
 
 export interface MorningSession {
-  step: "sleep" | "motivation" | "voice" | "plan" | "done"
+  step: "sleep" | "energy" | "yesterday" | "voice" | "plan" | "done"
   sleepScore: number
+  sleepTime: string
+  wakeTime: string
+  energyLevel: EnergyLevel
   motivationScore: number
   voiceNotes: string
+  focusOfTheDay: string
+  yesterdayTaskDecisions: Record<string, "move" | "delete" | "later">
   aiPlan: DayPlanTask[]
   aiGreeting: string
   aiCommentary: string

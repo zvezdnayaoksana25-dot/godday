@@ -81,11 +81,16 @@ function validateJSON<T>(text: string): T | null {
 
 export async function generateMorningPlan(
   sleepScore: number,
+  sleepTime: string,
+  wakeTime: string,
+  energyLevel: string,
   motivationScore: number,
   voiceNotes: string,
+  focusOfTheDay: string,
   patternsSummary: string,
   pendingTasks: string,
   yesterdayData: string,
+  yesterdayDecisions: string,
   semanticSummary: string,
 ): Promise<{
   greeting: string
@@ -93,7 +98,7 @@ export async function generateMorningPlan(
   commentary: string
   encouragement: string
 }> {
-  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, motivationScore, voiceNotes, patternsSummary, pendingTasks, yesterdayData, semanticSummary)
+  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, sleepTime, wakeTime, energyLevel, motivationScore, voiceNotes, focusOfTheDay, patternsSummary, pendingTasks, yesterdayData, yesterdayDecisions, semanticSummary)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ greeting: string; plan: DayPlanTask[]; commentary: string; encouragement: string }>(raw)
@@ -200,6 +205,9 @@ export async function generateDailySummary(
   tasksPlanned: number,
   tasksCompleted: number,
   sleepScore: number,
+  sleepTime: string,
+  wakeTime: string,
+  energyLevel: string,
   motivationScore: number,
   voiceNotes: string,
   completedTaskNames: string,
@@ -213,6 +221,9 @@ export async function generateDailySummary(
     tasksPlanned,
     tasksCompleted,
     sleepScore,
+    sleepTime,
+    wakeTime,
+    energyLevel,
     motivationScore,
     voiceNotes,
     completedTaskNames,
