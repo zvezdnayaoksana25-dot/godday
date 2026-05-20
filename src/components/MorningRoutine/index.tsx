@@ -125,7 +125,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         .map((t) => `- ${t.title} (${t.priority})`)
         .join("\n") || "нет"
 
-      const decisions = Object.entries(morningSession.yesterdayTaskDecisions)
+      const decisions = Object.entries(morningSession.yesterdayTaskDecisions || {})
         .map(([id, action]) => {
           const task = yesterdayTasks.find((t) => t.id === id)
           if (!task) return null
@@ -136,13 +136,13 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         .join(", ") || "нет решений"
 
       const result = await generateMorningPlan(
-        morningSession.sleepScore,
-        morningSession.sleepTime,
-        morningSession.wakeTime,
-        morningSession.energyLevel,
-        morningSession.motivationScore,
-        voiceInput || morningSession.voiceNotes,
-        morningSession.focusOfTheDay,
+        morningSession.sleepScore ?? 5,
+        morningSession.sleepTime || "23:00",
+        morningSession.wakeTime || "07:00",
+        morningSession.energyLevel || "medium",
+        morningSession.motivationScore ?? 5,
+        voiceInput || morningSession.voiceNotes || "",
+        morningSession.focusOfTheDay || "",
         getPatternsSummary(),
         pendingTasks,
         yesterdayData,
@@ -152,7 +152,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
 
       const userMsg: AIConversationMessage = {
         role: "user",
-        content: `Сон: ${morningSession.sleepScore}/10, ${morningSession.sleepTime}–${morningSession.wakeTime}. Энергия: ${morningSession.energyLevel}. Фокус: ${morningSession.focusOfTheDay || "не указан"}. Заметки: ${voiceInput || morningSession.voiceNotes}`,
+        content: `Сон: ${morningSession.sleepScore ?? 5}/10, ${morningSession.sleepTime || "23:00"}–${morningSession.wakeTime || "07:00"}. Энергия: ${morningSession.energyLevel || "medium"}. Фокус: ${morningSession.focusOfTheDay || "не указан"}. Заметки: ${voiceInput || morningSession.voiceNotes || "нет"}`,
         timestamp: new Date().toISOString(),
       }
       const aiMsg: AIConversationMessage = {
@@ -167,7 +167,9 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
       setAIPlan(result.plan, result.greeting, result.commentary, result.encouragement)
       setMorningStep("plan")
     } catch (e: any) {
-      setAIError(e.message || "Ошибка при генерации плана")
+      const errorMsg = e.message || "Ошибка при генерации плана"
+      setAIError(errorMsg)
+      setMorningStep("plan")
     } finally {
       setAILoading(false)
     }
@@ -616,8 +618,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
             <div className="space-y-6 text-center">
               <p className="text-destructive">{morningSession.error}</p>
               <div className="flex justify-center gap-3">
-                <Button variant="outline" onClick={() => setAIError(null)}>
-                  Попробовать снова
+                <Button variant="outline" onClick={handleGeneratePlan}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Попробовать снова
                 </Button>
                 <Button onClick={handleBack}>Назад</Button>
               </div>
