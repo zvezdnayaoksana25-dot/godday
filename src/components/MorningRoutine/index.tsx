@@ -345,7 +345,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   }
 
   const renderTimePicker = (label: string, value: string, onChange: (time: string) => void) => {
-    const [h, m] = value.split(":").map(Number)
+    const [h, m] = (value || "00:00").split(":").map(Number)
     return (
       <div className="space-y-3">
         <p className="text-sm font-medium text-center">{label}</p>

@@ -23,8 +23,8 @@ export interface PatternStore {
 }
 
 function calcSleepDuration(sleepTime: string, wakeTime: string): number {
-  const [sh, sm] = sleepTime.split(":").map(Number)
-  const [wh, wm] = wakeTime.split(":").map(Number)
+  const [sh, sm] = (sleepTime || "23:00").split(":").map(Number)
+  const [wh, wm] = (wakeTime || "07:00").split(":").map(Number)
   let sleepMin = sh * 60 + sm
   let wakeMin = wh * 60 + wm
   if (wakeMin <= sleepMin) wakeMin += 24 * 60

@@ -59,8 +59,19 @@ export const useStore = create<StoreState>()(
             s.morningSession = { step: "sleep", sleepScore: 5, sleepTime: "23:00", wakeTime: "07:00", energyLevel: "medium", motivationScore: 5, voiceNotes: "", focusOfTheDay: "", yesterdayTaskDecisions: {}, aiPlan: [], aiGreeting: "", aiCommentary: "", aiEncouragement: "", isLoading: false, error: null }
           } else {
             const ms = s.morningSession
+            if (!ms.step) ms.step = "sleep"
+            if (!ms.sleepTime) ms.sleepTime = "23:00"
+            if (!ms.wakeTime) ms.wakeTime = "07:00"
+            if (!ms.energyLevel) ms.energyLevel = "medium"
+            if (ms.sleepScore == null) ms.sleepScore = 5
+            if (ms.motivationScore == null) ms.motivationScore = 5
+            if (!ms.voiceNotes) ms.voiceNotes = ""
+            if (!ms.focusOfTheDay) ms.focusOfTheDay = ""
             if (!ms.yesterdayTaskDecisions) ms.yesterdayTaskDecisions = {}
             if (!ms.aiPlan) ms.aiPlan = []
+            if (!ms.aiGreeting) ms.aiGreeting = ""
+            if (!ms.aiCommentary) ms.aiCommentary = ""
+            if (!ms.aiEncouragement) ms.aiEncouragement = ""
           }
           if (!s.patterns) {
             s.patterns = { avgStartTime: 9, avgTasksPerDay: 5, avgCompletionRate: 0.6, avgSleepDuration: 8, frequentlyPostponedCategories: [], motivationHistory: [], sleepHistory: [], energyHistory: [], lastUpdated: new Date().toISOString() }
