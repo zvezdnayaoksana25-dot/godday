@@ -137,8 +137,8 @@ const SettingsPage = () => {
     setSummarizing("daily")
     try {
       const today = format(new Date(), "yyyy-MM-dd")
-      const dayPlan = dayPlans[today]
-      const dayTasks = tasks.filter((t) => t.dueDate === today)
+      const dayPlan = dayPlans?.[today]
+      const dayTasks = (tasks || []).filter((t) => t.dueDate === today)
       const completed = dayTasks.filter((t) => t.status === "done")
       const pending = dayTasks.filter((t) => t.status !== "done")
       const manual = dayTasks.filter((t) => !t.aiGenerated)

@@ -27,9 +27,9 @@ export const useStore = create<StoreState>()(
     {
       name: "flowday-data",
       storage: createJSONStorage(() => indexedDBStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, version: number) => {
-        if (version < 2 && persistedState?.state) {
+        if (version < 3 && persistedState?.state) {
           const s = persistedState.state
           if (!s.tasks) s.tasks = []
           if (!s.dayPlans) s.dayPlans = {}
@@ -46,12 +46,24 @@ export const useStore = create<StoreState>()(
             if (!p.sleepHistory) p.sleepHistory = []
             if (!p.frequentlyPostponedCategories) p.frequentlyPostponedCategories = []
           }
-          if (s.semanticMemory) {
+          if (!s.semanticMemory) {
+            s.semanticMemory = { facts: [], goals: [], preferences: [], projects: [], lastUpdated: new Date().toISOString() }
+          } else {
             const sm = s.semanticMemory
             if (!sm.facts) sm.facts = []
             if (!sm.goals) sm.goals = []
             if (!sm.preferences) sm.preferences = []
             if (!sm.projects) sm.projects = []
+          }
+          if (!s.morningSession) {
+            s.morningSession = { step: "sleep", sleepScore: 5, sleepTime: "23:00", wakeTime: "07:00", energyLevel: "medium", motivationScore: 5, voiceNotes: "", focusOfTheDay: "", yesterdayTaskDecisions: {}, aiPlan: [], aiGreeting: "", aiCommentary: "", aiEncouragement: "", isLoading: false, error: null }
+          } else {
+            const ms = s.morningSession
+            if (!ms.yesterdayTaskDecisions) ms.yesterdayTaskDecisions = {}
+            if (!ms.aiPlan) ms.aiPlan = []
+          }
+          if (!s.patterns) {
+            s.patterns = { avgStartTime: 9, avgTasksPerDay: 5, avgCompletionRate: 0.6, avgSleepDuration: 8, frequentlyPostponedCategories: [], motivationHistory: [], sleepHistory: [], energyHistory: [], lastUpdated: new Date().toISOString() }
           }
         }
         return persistedState

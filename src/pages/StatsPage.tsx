@@ -42,14 +42,14 @@ const StatsPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [statsError, setStatsError] = useState<string | null>(null)
 
-  const totalTasks = tasks.length
-  const completedTasks = tasks.filter((t) => t.status === "done").length
+  const totalTasks = (tasks || []).length
+  const completedTasks = (tasks || []).filter((t) => t.status === "done").length
   const completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0
-  const totalDays = Object.keys(dayPlans).length
+  const totalDays = Object.keys(dayPlans || {}).length
 
-  const motivationHistory = patterns.motivationHistory || []
-  const sleepHistory = patterns.sleepHistory || []
-  const energyHistory = patterns.energyHistory || []
+  const motivationHistory = patterns?.motivationHistory || []
+  const sleepHistory = patterns?.sleepHistory || []
+  const energyHistory = patterns?.energyHistory || []
 
   const avgMotivation =
     motivationHistory.length > 0
@@ -61,7 +61,7 @@ const StatsPage = () => {
       : 0
 
   const categoryStats: Record<string, { total: number; completed: number }> = {}
-  tasks.forEach((t) => {
+  ;(tasks || []).forEach((t) => {
     if (!categoryStats[t.category]) categoryStats[t.category] = { total: 0, completed: 0 }
     categoryStats[t.category].total++
     if (t.status === "done") categoryStats[t.category].completed++
@@ -84,7 +84,7 @@ const StatsPage = () => {
 
   const last7DaysData = last7Days.map((day) => {
     const dateStr = format(day, "yyyy-MM-dd")
-    const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+    const dayTasks = (tasks || []).filter((t) => t.dueDate === dateStr)
     const completed = dayTasks.filter((t) => t.status === "done").length
     return {
       date: format(day, "dd"),
@@ -99,7 +99,7 @@ const StatsPage = () => {
 
   const dayNames = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
   const dayBreakdown: Record<string, { total: number; completed: number }> = {}
-  tasks.forEach((t) => {
+  ;(tasks || []).forEach((t) => {
     if (!t.dueDate) return
     const d = new Date(t.dueDate + "T00:00:00")
     const dayName = dayNames[d.getDay()]

@@ -47,10 +47,10 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const getSemanticSummary = useStore((s) => s.getSemanticSummary)
 
   const today = format(new Date(), "yyyy-MM-dd")
-  const todayTasks = tasks.filter((t) => t.dueDate === today)
+  const todayTasks = (tasks || []).filter((t) => t.dueDate === today)
   const completedTasks = todayTasks.filter((t) => t.status === "done")
   const pendingTasks = todayTasks.filter((t) => t.status !== "done")
-  const dayPlan = dayPlans[today]
+  const dayPlan = dayPlans?.[today]
 
   const [userInput, setUserInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)

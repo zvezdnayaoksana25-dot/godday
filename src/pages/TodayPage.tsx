@@ -46,10 +46,10 @@ const TodayPage = () => {
   const [showAdjustDay, setShowAdjustDay] = useState(false)
 
   const today = format(new Date(), "yyyy-MM-dd")
-  const todayTasks = tasks.filter((t) => t.dueDate === today)
+  const todayTasks = (tasks || []).filter((t) => t.dueDate === today)
   const completedToday = todayTasks.filter((t) => t.status === "done").length
   const totalToday = todayTasks.length
-  const hasApiKey = !!settings.groqApiKey
+  const hasApiKey = !!(settings?.groqApiKey)
 
   useEffect(() => {
     if (hasApiKey && !hasMorningRoutine(today) && !showMorningRoutine) {
@@ -79,12 +79,12 @@ const TodayPage = () => {
     const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
     const lastSummarized = getLastSummarizedDay()
 
-    if (lastSummarized !== yesterday && dayPlans[yesterday] && dayPlans[yesterday].taskIds.length > 0) {
-      const yesterdayTasks = tasks.filter((t) => t.dueDate === yesterday)
+    if (lastSummarized !== yesterday && dayPlans?.[yesterday] && dayPlans[yesterday].taskIds.length > 0) {
+      const yesterdayTasks = (tasks || []).filter((t) => t.dueDate === yesterday)
       const completed = yesterdayTasks.filter((t) => t.status === "done")
       const pending = yesterdayTasks.filter((t) => t.status !== "done")
       const manual = yesterdayTasks.filter((t) => !t.aiGenerated)
-      const plan = dayPlans[yesterday]
+      const plan = dayPlans?.[yesterday]
 
       generateDailySummary(
         yesterday,
@@ -123,9 +123,9 @@ const TodayPage = () => {
         const d = new Date(weekStart)
         d.setDate(weekStart.getDate() + i)
         const dateStr = format(d, "yyyy-MM-dd")
-        const dayTasks = tasks.filter((t) => t.dueDate === dateStr)
+        const dayTasks = (tasks || []).filter((t) => t.dueDate === dateStr)
         const completed = dayTasks.filter((t) => t.status === "done").length
-        const plan = dayPlans[dateStr]
+        const plan = dayPlans?.[dateStr]
         dailyData += `${format(d, "dd.MM")}: задач ${dayTasks.length}, выполнено ${completed}${plan ? `, сон ${plan.sleepScore}/10, энергия ${plan.energyLevel || "—"}` : ""}\n`
       }
 

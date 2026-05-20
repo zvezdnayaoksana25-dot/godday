@@ -92,7 +92,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const today = format(new Date(), "yyyy-MM-dd")
   const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd")
   const yesterdayPlan = getDayPlan(yesterday)
-  const yesterdayTasks = tasks.filter((t) => t.dueDate === yesterday)
+  const yesterdayTasks = (tasks || []).filter((t) => t.dueDate === yesterday)
   const yesterdayCompleted = yesterdayTasks.filter((t) => t.status === "done")
   const yesterdayPending = yesterdayTasks.filter((t) => t.status !== "done")
   const yesterdayData = yesterdayPlan
@@ -101,11 +101,11 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
 
   const handleNext = useCallback(() => {
     const stepOrder: MorningSession["step"][] = ["sleep", "energy", "yesterday", "voice", "plan", "done"]
-    const currentIndex = stepOrder.indexOf(morningSession.step)
+    const currentIndex = stepOrder.indexOf(morningSession?.step || "sleep")
     if (currentIndex < stepOrder.length - 1) {
       setMorningStep(stepOrder[currentIndex + 1])
     }
-  }, [morningSession.step, setMorningStep])
+  }, [morningSession?.step, setMorningStep])
 
   const handleBack = useCallback(() => {
     const stepOrder: MorningSession["step"][] = ["sleep", "energy", "yesterday", "voice", "plan", "done"]
@@ -485,7 +485,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
             {yesterdayPending.length > 0 ? (
               <div className="space-y-2">
                 {yesterdayPending.map((task) => {
-                  const decision = morningSession.yesterdayTaskDecisions[task.id]
+                  const decisions = morningSession.yesterdayTaskDecisions || {}
+                  const decision = decisions[task.id]
                   return (
                     <Card key={task.id} className="p-3">
                       <div className="flex items-center justify-between">
@@ -493,8 +494,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
                         <div className="flex gap-1 ml-2">
                           <button
                             onClick={() => {
-                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "move" as const }
-                              setYesterdayTaskDecisions(decisions)
+                              const newDecisions = { ...decisions, [task.id]: "move" as const }
+                              setYesterdayTaskDecisions(newDecisions)
                             }}
                             className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                               decision === "move" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
@@ -504,8 +505,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
                           </button>
                           <button
                             onClick={() => {
-                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "later" as const }
-                              setYesterdayTaskDecisions(decisions)
+                              const newDecisions = { ...decisions, [task.id]: "later" as const }
+                              setYesterdayTaskDecisions(newDecisions)
                             }}
                             className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                               decision === "later" ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground"
@@ -515,8 +516,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
                           </button>
                           <button
                             onClick={() => {
-                              const decisions = { ...morningSession.yesterdayTaskDecisions, [task.id]: "delete" as const }
-                              setYesterdayTaskDecisions(decisions)
+                              const newDecisions = { ...decisions, [task.id]: "delete" as const }
+                              setYesterdayTaskDecisions(newDecisions)
                             }}
                             className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                               decision === "delete" ? "bg-destructive text-white" : "bg-muted text-muted-foreground"
