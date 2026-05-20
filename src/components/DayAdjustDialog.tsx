@@ -45,6 +45,9 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
   const getConversationHistory = useStore((s) => s.getConversationHistory)
   const addConversationMessage = useStore((s) => s.addConversationMessage)
   const getSemanticSummary = useStore((s) => s.getSemanticSummary)
+  const morningSession = useStore((s) => s.morningSession)
+  const get = useStore.getState
+  const set = useStore.setState
 
   const today = format(new Date(), "yyyy-MM-dd")
   const todayTasks = (tasks || []).filter((t) => t.dueDate === today)
@@ -74,14 +77,17 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
         : JSON.stringify(todayTasks.map((t) => ({ title: t.title, priority: t.priority, category: t.category, suggestedTime: t.timeBlock })))
 
       const conversationHistory = getConversationHistory(today)
-      const conversationStr = conversationHistory.length > 0
-        ? conversationHistory
+      const limitedHistory = conversationHistory.slice(-5)
+      const conversationStr = limitedHistory.length > 0
+        ? limitedHistory
             .map((m) => `${m.role === "user" ? "Я" : "AI"}: ${m.content}`)
             .join("\n\n")
         : "нет"
 
       const adjusted = await adjustDayPlan(
         currentTime,
+        morningSession?.energyLevel || "medium",
+        morningSession?.motivationScore ?? 5,
         JSON.parse(originalPlanStr),
         completedStr,
         pendingStr,
@@ -118,7 +124,18 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
     const todayStr = format(new Date(), "yyyy-MM-dd")
 
     if (result.newTasks.length > 0) {
-      pendingTasks.forEach((t) => deleteTask(t.id))
+      const newTaskTitles = new Set(result.newTasks.map((t) => t.title.toLowerCase()))
+
+      const replacedPending = pendingTasks.filter((t) => newTaskTitles.has(t.title.toLowerCase()))
+      const keptPending = pendingTasks.filter((t) => !newTaskTitles.has(t.title.toLowerCase()))
+
+      replacedPending.forEach((t) => deleteTask(t.id))
+
+      const moveHistory = get().patterns?.taskMoveHistory || []
+      const postponedTasks = get().patterns?.frequentlyPostponedTasks || []
+      replacedPending.forEach((t) => {
+        moveHistory.push({ taskId: t.id, title: t.title, from: todayStr, to: todayStr, reason: "adjust" as const, timestamp: new Date().toISOString() })
+      })
 
       const newTaskList: Task[] = result.newTasks.map((t, i) => ({
         id: uuidv4(),
@@ -134,7 +151,25 @@ const DayAdjustDialog = ({ open, onOpenChange }: DayAdjustDialogProps) => {
         order: i,
       }))
 
-      addTasks(newTaskList)
+      addTasks([...newTaskList, ...keptPending.map((t, i) => ({ ...t, order: newTaskList.length + i }))])
+
+      const updatedPostponed = postponedTasks.map((p) => {
+        const replaced = replacedPending.find((t) => t.title === p.title)
+        return replaced ? { ...p, count: p.count + 1 } : p
+      })
+      replacedPending.forEach((t) => {
+        if (!updatedPostponed.find((p) => p.title === t.title)) {
+          updatedPostponed.push({ title: t.title, count: 1, category: t.category })
+        }
+      })
+
+      set((state) => ({
+        patterns: {
+          ...state.patterns,
+          taskMoveHistory: moveHistory.slice(-100),
+          frequentlyPostponedTasks: updatedPostponed,
+        },
+      }))
 
       if (dayPlan) {
         saveDayPlan({

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import TabBar from "@/components/layout/TabBar"
 import { useStore } from "@/store/useStore"
 import { generateAIStats } from "@/services/ai"
-import { BarChart3, TrendingUp, Calendar, Sparkles, Target, Award, Zap, Lightbulb, Loader2, RefreshCw, ArrowLeft } from "lucide-react"
+import { BarChart3, TrendingUp, Calendar, Sparkles, Target, Award, Zap, Lightbulb, Loader2, RefreshCw, ArrowLeft, Repeat } from "lucide-react"
 
 const categoryEmojis: Record<string, string> = {
   work: "💼",
@@ -70,6 +70,18 @@ const StatsPage = () => {
   const categoryStatsStr = Object.entries(categoryStats)
     .map(([cat, stats]) => `${categoryLabels[cat]}: ${stats.completed}/${stats.total}`)
     .join(", ") || "нет данных"
+
+  const frequentlyPostponedTasks = patterns?.frequentlyPostponedTasks || []
+  const taskMoveHistory = patterns?.taskMoveHistory || []
+  const postponedTasksStr = frequentlyPostponedTasks
+    .filter((t) => t.count >= 2)
+    .sort((a, b) => b.count - a.count)
+    .map((t) => `${t.title}: ${t.count}x (${categoryLabels[t.category] || t.category})`)
+    .join(", ") || "нет"
+  const recentMovesStr = taskMoveHistory
+    .slice(-5)
+    .map((m) => `${m.title}: ${m.from} → ${m.to} (${m.reason === "manual" ? "вручную" : m.reason === "morning" ? "утро" : "корректировка"})`)
+    .join("; ") || "нет"
 
   const recentSummariesStr = Object.entries(dailySummaries)
     .sort(([a], [b]) => b.localeCompare(a))
@@ -135,6 +147,7 @@ const StatsPage = () => {
         recentSummariesStr,
         diaryEntriesStr,
         dailyBreakdownStr,
+        postponedTasksStr,
       )
       saveAIStats(JSON.stringify(result))
     } catch (e: any) {
@@ -360,6 +373,37 @@ const StatsPage = () => {
                     )
                   })}
               </div>
+            </Card>
+          )}
+
+          {frequentlyPostponedTasks.filter((t) => t.count >= 2).length > 0 && (
+            <Card className="p-4 mb-6">
+              <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Repeat className="h-4 w-4 text-muted-foreground" />
+                Часто переносимые задачи
+              </h3>
+              <div className="space-y-2">
+                {frequentlyPostponedTasks
+                  .filter((t) => t.count >= 2)
+                  .sort((a, b) => b.count - a.count)
+                  .map((t, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <span>{t.title}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {t.count}x
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{categoryLabels[t.category] || t.category}</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              {taskMoveHistory.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground mb-1">Последние переносы:</p>
+                  <p className="text-xs text-muted-foreground">{recentMovesStr}</p>
+                </div>
+              )}
             </Card>
           )}
 

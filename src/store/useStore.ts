@@ -74,7 +74,11 @@ export const useStore = create<StoreState>()(
             if (!ms.aiEncouragement) ms.aiEncouragement = ""
           }
           if (!s.patterns) {
-            s.patterns = { avgStartTime: 9, avgTasksPerDay: 5, avgCompletionRate: 0.6, avgSleepDuration: 8, frequentlyPostponedCategories: [], motivationHistory: [], sleepHistory: [], energyHistory: [], lastUpdated: new Date().toISOString() }
+            s.patterns = { avgStartTime: 9, avgTasksPerDay: 5, avgCompletionRate: 0.6, avgSleepDuration: 8, frequentlyPostponedCategories: [], frequentlyPostponedTasks: [], taskMoveHistory: [], motivationHistory: [], sleepHistory: [], energyHistory: [], lastUpdated: new Date().toISOString() }
+          } else {
+            const p = s.patterns
+            if (!p.frequentlyPostponedTasks) p.frequentlyPostponedTasks = []
+            if (!p.taskMoveHistory) p.taskMoveHistory = []
           }
         }
         return persistedState

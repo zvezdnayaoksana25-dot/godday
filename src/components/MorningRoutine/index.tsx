@@ -75,6 +75,8 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   const setSemanticMemory = useStore((s) => s.setSemanticMemory)
   const deleteTask = useStore((s) => s.deleteTask)
   const updateTaskDueDate = useStore((s) => s.updateTaskDueDate)
+  const get = useStore.getState
+  const set = useStore.setState
 
   const [voiceInput, setVoiceInput] = useState("")
   const [isListening, setIsListening] = useState(false)
@@ -120,9 +122,9 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
     setAIError(null)
 
     try {
-      const pendingTasks = getTodayTasks()
-        .filter((t) => t.status !== "done")
-        .map((t) => `- ${t.title} (${t.priority})`)
+      const yesterdayCarryover = yesterdayPending
+        .filter((t) => (morningSession.yesterdayTaskDecisions || {})[t.id] === "move")
+        .map((t) => `- ${t.title} (${t.priority}) [перенесено]`)
         .join("\n") || "нет"
 
       const decisions = Object.entries(morningSession.yesterdayTaskDecisions || {})
@@ -144,7 +146,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         voiceInput || morningSession.voiceNotes || "",
         morningSession.focusOfTheDay || "",
         getPatternsSummary(),
-        pendingTasks,
+        yesterdayCarryover,
         yesterdayData,
         decisions,
         getSemanticSummary(),
@@ -181,15 +183,40 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
 
     const decisions = morningSession.yesterdayTaskDecisions || {}
     const tomorrow = format(new Date(Date.now() + 86400000), "yyyy-MM-dd")
+    const moveHistory = get().patterns?.taskMoveHistory || []
+    const postponedTasks = get().patterns?.frequentlyPostponedTasks || []
+
     Object.entries(decisions).forEach(([id, action]) => {
       if (action === "delete") {
         deleteTask(id)
       } else if (action === "move") {
+        const task = yesterdayTasks.find((t) => t.id === id)
+        if (task) {
+          moveHistory.push({ taskId: id, title: task.title, from: yesterday, to: today, reason: "morning" as const, timestamp: new Date().toISOString() })
+          const existing = postponedTasks.find((p) => p.title === task.title)
+          if (existing) {
+            existing.count++
+          } else {
+            postponedTasks.push({ title: task.title, count: 1, category: task.category })
+          }
+        }
         updateTaskDueDate(id, today)
       } else if (action === "later") {
+        const task = yesterdayTasks.find((t) => t.id === id)
+        if (task) {
+          moveHistory.push({ taskId: id, title: task.title, from: yesterday, to: tomorrow, reason: "morning" as const, timestamp: new Date().toISOString() })
+        }
         updateTaskDueDate(id, tomorrow)
       }
     })
+
+    set((state) => ({
+      patterns: {
+        ...state.patterns,
+        taskMoveHistory: moveHistory.slice(-100),
+        frequentlyPostponedTasks: [...postponedTasks],
+      },
+    }))
 
     const aiPlan = morningSession.aiPlan || []
     const newTasks: Task[] = aiPlan.map((task: DayPlanTask, i: number) => ({
@@ -268,10 +295,10 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
         const hasNew = (extracted.facts?.length || 0) + (extracted.goals?.length || 0) + (extracted.preferences?.length || 0) + (extracted.projects?.length || 0)
         if (hasNew > 0) {
           setSemanticMemory({
-            facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])],
-            goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])],
-            preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])],
-            projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])],
+            facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])].slice(-50),
+            goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])].slice(-50),
+            preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])].slice(-50),
+            projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])].slice(-50),
             lastUpdated: new Date().toISOString(),
           })
         }

@@ -12,7 +12,7 @@ import {
   AI_STATS_PROMPT,
   SEMANTIC_MEMORY_PROMPT,
 } from "@/utils/prompts"
-import type { DayPlanTask, EveningReport, DaySummary, PeriodSummary, SemanticMemory } from "@/types"
+import type { DayPlanTask, EveningReport, DaySummary, PeriodSummary, SemanticMemory, ConsolidatedMemory } from "@/types"
 
 const MAX_RETRIES = 2
 
@@ -88,7 +88,7 @@ export async function generateMorningPlan(
   voiceNotes: string,
   focusOfTheDay: string,
   patternsSummary: string,
-  pendingTasks: string,
+  yesterdayCarryover: string,
   yesterdayData: string,
   yesterdayDecisions: string,
   semanticSummary: string,
@@ -98,7 +98,7 @@ export async function generateMorningPlan(
   commentary: string
   encouragement: string
 }> {
-  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, sleepTime, wakeTime, energyLevel, motivationScore, voiceNotes, focusOfTheDay, patternsSummary, pendingTasks, yesterdayData, yesterdayDecisions, semanticSummary)
+  const prompt = MORNING_ROUTINE_PROMPT(sleepScore, sleepTime, wakeTime, energyLevel, motivationScore, voiceNotes, focusOfTheDay, patternsSummary, yesterdayCarryover, yesterdayData, yesterdayDecisions, semanticSummary)
   const raw = await callAI(prompt)
 
   const parsed = validateJSON<{ greeting: string; plan: DayPlanTask[]; commentary: string; encouragement: string }>(raw)
@@ -168,6 +168,8 @@ export async function parseVoiceInput(voiceText: string): Promise<
 
 export async function adjustDayPlan(
   currentTime: string,
+  currentEnergy: string,
+  currentMotivation: number,
   originalPlan: DayPlanTask[],
   completedTasks: string,
   pendingTasks: string,
@@ -182,6 +184,8 @@ export async function adjustDayPlan(
 }> {
   const prompt = ADJUST_DAY_PROMPT(
     currentTime,
+    currentEnergy,
+    currentMotivation,
     JSON.stringify(originalPlan),
     completedTasks,
     pendingTasks,
@@ -305,6 +309,7 @@ export async function generateAIStats(
   recentDailySummaries: string,
   diaryEntries: string,
   dailyBreakdown: string,
+  postponedTasks: string,
 ): Promise<{
   completionRate: number
   streakDays: number
@@ -328,6 +333,7 @@ export async function generateAIStats(
     recentDailySummaries,
     diaryEntries,
     dailyBreakdown,
+    postponedTasks,
   )
   const raw = await callAI(prompt)
 
@@ -372,6 +378,48 @@ export async function extractSemanticMemory(
     goals: parsed.goals || [],
     preferences: parsed.preferences || [],
     projects: parsed.projects || [],
+  }
+}
+
+export async function consolidateSemanticMemory(
+  currentMemory: SemanticMemory,
+): Promise<ConsolidatedMemory> {
+  const prompt = `У тебя есть долгосрочная память пользователя. Проанализируй и оптимизируй её.
+
+Текущая память:
+Факты: ${(currentMemory.facts || []).join("; ") || "нет"}
+Цели: ${(currentMemory.goals || []).join("; ") || "нет"}
+Предпочтения: ${(currentMemory.preferences || []).join("; ") || "нет"}
+Проекты: ${(currentMemory.projects || []).join("; ") || "нет"}
+
+Задачи:
+1. Объедини похожие факты в один
+2. Отметь выполненные или неактуальные цели — перемести в discarded
+3. Удали дубликаты предпочтений
+4. Объедини завершённые проекты
+5. Оставь только актуальную информацию
+
+Ответь JSON:
+{
+  "facts": ["обновлённый факт 1"],
+  "goals": ["актуальная цель 1"],
+  "preferences": ["предпочтение 1"],
+  "projects": ["актуальный проект 1"],
+  "discarded": ["старый факт", "выполненная цель"]
+}`
+  const raw = await callAI(prompt)
+
+  const parsed = validateJSON<ConsolidatedMemory>(raw)
+  if (!parsed) {
+    return { facts: currentMemory.facts, goals: currentMemory.goals, preferences: currentMemory.preferences, projects: currentMemory.projects, discarded: [] }
+  }
+
+  return {
+    facts: parsed.facts || currentMemory.facts,
+    goals: parsed.goals || currentMemory.goals,
+    preferences: parsed.preferences || currentMemory.preferences,
+    projects: parsed.projects || currentMemory.projects,
+    discarded: parsed.discarded || [],
   }
 }
 

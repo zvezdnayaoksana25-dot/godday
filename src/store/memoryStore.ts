@@ -1,7 +1,9 @@
 import { format } from "date-fns"
 import type { StateCreator } from "zustand"
-import type { AIConversationMessage, SemanticMemory } from "@/types"
+import type { AIConversationMessage, SemanticMemory, ConsolidatedMemory } from "@/types"
 import type { StoreState } from "./useStore"
+
+const MEMORY_LIMIT = 50
 
 export interface MemoryStore {
   conversationHistory: Record<string, AIConversationMessage[]>
@@ -11,6 +13,7 @@ export interface MemoryStore {
   formatConversationHistory: (date: string) => string
   clearConversationHistory: (date: string) => void
   setSemanticMemory: (memory: SemanticMemory) => void
+  consolidateSemanticMemory: (consolidated: ConsolidatedMemory) => void
   addSemanticFact: (fact: string) => void
   removeSemanticFact: (index: number) => void
   addSemanticGoal: (goal: string) => void
@@ -20,6 +23,7 @@ export interface MemoryStore {
   addSemanticProject: (project: string) => void
   removeSemanticProject: (index: number) => void
   getSemanticSummary: () => string
+  needsMemoryConsolidation: () => boolean
 }
 
 const defaultSemanticMemory: SemanticMemory = {
@@ -68,6 +72,18 @@ export const createMemoryStore: StateCreator<StoreState, [], [], MemoryStore> = 
 
   setSemanticMemory: (memory) => {
     set({ semanticMemory: { ...memory, lastUpdated: new Date().toISOString() } })
+  },
+
+  consolidateSemanticMemory: (consolidated) => {
+    set({
+      semanticMemory: {
+        facts: consolidated.facts.slice(0, MEMORY_LIMIT),
+        goals: consolidated.goals.slice(0, MEMORY_LIMIT),
+        preferences: consolidated.preferences.slice(0, MEMORY_LIMIT),
+        projects: consolidated.projects.slice(0, MEMORY_LIMIT),
+        lastUpdated: new Date().toISOString(),
+      },
+    })
   },
 
   addSemanticFact: (fact) => {
@@ -186,5 +202,12 @@ export const createMemoryStore: StateCreator<StoreState, [], [], MemoryStore> = 
     if (preferences.length > 0) parts.push(`Предпочтения: ${preferences.join("; ")}`)
     if (projects.length > 0) parts.push(`Проекты: ${projects.join("; ")}`)
     return parts.length > 0 ? parts.join(". ") : "нет"
+  },
+
+  needsMemoryConsolidation: () => {
+    const m = get().semanticMemory
+    if (!m) return false
+    const total = (m.facts?.length || 0) + (m.goals?.length || 0) + (m.preferences?.length || 0) + (m.projects?.length || 0)
+    return total > MEMORY_LIMIT * 2
   },
 })

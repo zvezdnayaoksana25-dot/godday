@@ -24,6 +24,7 @@ const DiaryPage = () => {
   const restoreFromBackup = useStore((s) => s.restoreFromBackup)
   const semanticMemory = useStore((s) => s.semanticMemory)
   const setSemanticMemory = useStore((s) => s.setSemanticMemory)
+  const dayPlans = useStore((s) => s.dayPlans)
   const settings = useStore((s) => s.settings)
 
   const [content, setContent] = useState("")
@@ -31,6 +32,7 @@ const DiaryPage = () => {
   const [isSaving, setIsSaving] = useState(false)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
   const [savedCount, setSavedCount] = useState(0)
+  const [voiceInput, setVoiceInput] = useState("")
   const isMounted = useRef(true)
 
   useEffect(() => {
@@ -64,17 +66,18 @@ const DiaryPage = () => {
     const existingMemory = semanticMemory
       ? `Известные факты: ${(semanticMemory.facts || []).join("; ")}. Цели: ${(semanticMemory.goals || []).join("; ")}.`
       : ""
+    const dayPlan = dayPlans?.[today]
     const context = `${existingMemory}\nЗаписи сегодня: ${existingEntries || "нет"}\nНовая запись: ${content.trim()}`
 
-    extractSemanticMemory(context, "", "").then((extracted) => {
+    extractSemanticMemory(context, voiceInput || "", dayPlan ? JSON.stringify(dayPlan.originalPlan || []) : "нет").then((extracted) => {
       if (!isMounted.current) return
       const hasNew = (extracted.facts?.length || 0) + (extracted.goals?.length || 0) + (extracted.preferences?.length || 0) + (extracted.projects?.length || 0)
       if (hasNew > 0) {
         setSemanticMemory({
-          facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])],
-          goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])],
-          preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])],
-          projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])],
+          facts: [...new Set([...(semanticMemory.facts || []), ...(extracted.facts || [])])].slice(-50),
+          goals: [...new Set([...(semanticMemory.goals || []), ...(extracted.goals || [])])].slice(-50),
+          preferences: [...new Set([...(semanticMemory.preferences || []), ...(extracted.preferences || [])])].slice(-50),
+          projects: [...new Set([...(semanticMemory.projects || []), ...(extracted.projects || [])])].slice(-50),
           lastUpdated: new Date().toISOString(),
         })
       }

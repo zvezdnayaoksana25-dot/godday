@@ -9,6 +9,8 @@ const defaultPatterns: Patterns = {
   avgCompletionRate: 0.6,
   avgSleepDuration: 8,
   frequentlyPostponedCategories: [],
+  frequentlyPostponedTasks: [],
+  taskMoveHistory: [],
   motivationHistory: [],
   sleepHistory: [],
   energyHistory: [],
@@ -128,6 +130,8 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
           ...p,
           avgTasksPerDay: newAvgTasks,
           avgCompletionRate: newAvgRate,
+          frequentlyPostponedTasks: p.frequentlyPostponedTasks || [],
+          taskMoveHistory: p.taskMoveHistory || [],
         },
       }
     })
@@ -139,6 +143,8 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
     const sleepHistory = p.sleepHistory || []
     const energyHistory = p.energyHistory || []
     const frequentlyPostponedCategories = p.frequentlyPostponedCategories || []
+    const frequentlyPostponedTasks = p.frequentlyPostponedTasks || []
+    const taskMoveHistory = p.taskMoveHistory || []
 
     const avgMotivation =
       motivationHistory.length > 0
@@ -165,6 +171,18 @@ export const createPatternStore: StateCreator<StoreState, [], [], PatternStore> 
     const avgCompletionRate = p.avgCompletionRate ?? 0
     const avgTasksPerDay = p.avgTasksPerDay ?? 0
 
-    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${avgTasksPerDay} задач в день. Часто переносимые категории: ${frequentlyPostponedCategories.join(", ") || "нет"}.`
+    const postponedTasksStr = frequentlyPostponedTasks
+      .filter((t) => t.count >= 2)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map((t) => `${t.title} (${t.count}x)`)
+      .join(", ") || "нет"
+
+    const recentMoves = taskMoveHistory
+      .slice(-10)
+      .map((m) => `${m.title}: ${m.from} → ${m.to} (${m.reason})`)
+      .join("; ") || "нет"
+
+    return `Средняя мотивация: ${avgMotivation.toFixed(1)}/10. Средний сон: ${avgSleep.toFixed(1)}/10. Средняя длительность сна: ${avgDuration.toFixed(1)}ч. ${energySummary}. Средний процент выполнения: ${(avgCompletionRate * 100).toFixed(0)}%. Обычно делаешь около ${avgTasksPerDay} задач в день. Часто переносимые категории: ${frequentlyPostponedCategories.join(", ") || "нет"}. Часто переносимые задачи: ${postponedTasksStr}. Последние переносы: ${recentMoves}.`
   },
 })

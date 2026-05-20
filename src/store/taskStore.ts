@@ -55,11 +55,34 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
   },
 
   updateTaskDueDate: (id, newDate) => {
-    set((state) => ({
-      tasks: (state.tasks || []).map((t) =>
-        t.id === id ? { ...t, dueDate: newDate, updatedAt: new Date().toISOString() } : t,
-      ),
-    }))
+    set((state) => {
+      const task = (state.tasks || []).find((t) => t.id === id)
+      const oldDate = task?.dueDate || ""
+      const updatedTasks = (state.tasks || []).map((t) =>
+        t.id === id ? { ...t, dueDate: newDate, movedCount: (t.movedCount || 0) + 1, lastMovedFrom: oldDate, updatedAt: new Date().toISOString() } : t,
+      )
+      if (task && oldDate !== newDate) {
+        const moveHistory = state.patterns?.taskMoveHistory || []
+        moveHistory.push({ taskId: id, title: task.title, from: oldDate, to: newDate, reason: "manual" as const, timestamp: new Date().toISOString() })
+        const postponedTasks = state.patterns?.frequentlyPostponedTasks || []
+        const existing = postponedTasks.find((p) => p.title === task.title)
+        let updatedPostponed: { title: string; count: number; category: Category }[]
+        if (existing) {
+          updatedPostponed = postponedTasks.map((p) => p.title === task.title ? { ...p, count: p.count + 1 } : p)
+        } else {
+          updatedPostponed = [...postponedTasks, { title: task.title, count: 1, category: task.category }]
+        }
+        return {
+          tasks: updatedTasks,
+          patterns: {
+            ...state.patterns,
+            taskMoveHistory: moveHistory.slice(-100),
+            frequentlyPostponedTasks: updatedPostponed,
+          },
+        }
+      }
+      return { tasks: updatedTasks }
+    })
   },
 
   deleteTask: (id) => {

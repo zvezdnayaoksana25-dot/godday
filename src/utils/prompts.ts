@@ -7,7 +7,7 @@ export const MORNING_ROUTINE_PROMPT = (
   voiceNotes: string,
   focusOfTheDay: string,
   patternsSummary: string,
-  pendingTasks: string,
+  yesterdayCarryover: string,
   yesterdayData: string,
   yesterdayDecisions: string,
   semanticSummary: string,
@@ -21,14 +21,17 @@ export const MORNING_ROUTINE_PROMPT = (
 - Заметки: "${voiceNotes}"
 - Паттерны: ${patternsSummary}
 - Память: ${semanticSummary}
+- Задачи для переноса сегодня: ${yesterdayCarryover}
 - Вчерашние решения: ${yesterdayDecisions || "нет"}
 - Вчера: ${yesterdayData}
 
 Правила:
 1. Максимум 5-7 задач. При низкой энергии/мотивации — меньше.
 2. Фокус дня — приоритет №1.
-3. Распредели по времени: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
-4. В commentary — 2-4 предложения: учти вчера, паттерны, текущее состояние, поддержи.
+3. Задачи из "Задачи для переноса сегодня" — включи их в план с высоким приоритетом, пользователь уже решил их перенести.
+4. Если задача переносится 3+ раз (видно в паттернах) — предложи её удалить или разбить на мелкие, не включай как есть.
+5. Распредели по времени: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
+6. В commentary — 2-4 предложения: учти вчера, паттерны, текущее состояние, поддержи.
 
 Ответь JSON:
 {
@@ -80,6 +83,8 @@ ${currentPlan}
 
 export const ADJUST_DAY_PROMPT = (
   currentTime: string,
+  currentEnergy: string,
+  currentMotivation: number,
   originalPlan: string,
   completedTasks: string,
   pendingTasks: string,
@@ -91,6 +96,8 @@ export const ADJUST_DAY_PROMPT = (
 
 Контекст:
 - Сейчас: ${currentTime}
+- Текущая энергия: ${currentEnergy === "low" ? "разбита" : currentEnergy === "high" ? "полна энергии" : "в норме"}
+- Текущая мотивация: ${currentMotivation}/10
 - Утренний план: ${originalPlan}
 - Выполнено: ${completedTasks}
 - Осталось: ${pendingTasks}
@@ -102,8 +109,9 @@ export const ADJUST_DAY_PROMPT = (
 Правила:
 1. НЕ включай выполненные задачи в newTasks.
 2. newTasks — только новые или изменённые оставшиеся задачи.
-3. Распредели: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
-4. В commentary — поддержи, объясни изменения.
+3. Учитывай время дня: если сейчас afternoon/evening — не ставь morning задачи.
+4. Распредели: morning/afternoon/evening. Категории: work/personal/health/study/errand/other. Приоритеты: high/medium/low.
+5. В commentary — поддержи, объясни изменения.
 
 Ответь JSON:
 {
@@ -243,6 +251,7 @@ export const AI_STATS_PROMPT = (
   recentDailySummaries: string,
   diaryEntries: string,
   dailyBreakdown: string,
+  postponedTasks: string,
 ) => `Ты — аналитик продуктивности. Проанализируй данные.
 
 Данные:
@@ -255,6 +264,7 @@ export const AI_STATS_PROMPT = (
 - Саммаризации: ${recentDailySummaries || "нет"}
 - Дневник: ${diaryEntries || "нет"}
 - По дням недели: ${dailyBreakdown}
+- Часто переносимые задачи: ${postponedTasks}
 
 Ответь JSON:
 {

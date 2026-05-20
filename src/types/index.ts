@@ -17,6 +17,8 @@ export interface Task {
   aiGenerated: boolean
   aiNotes?: string
   order: number
+  movedCount?: number
+  lastMovedFrom?: string
 }
 
 export type EnergyLevel = "low" | "medium" | "high"
@@ -64,6 +66,8 @@ export interface Patterns {
   avgCompletionRate: number
   avgSleepDuration: number
   frequentlyPostponedCategories: Category[]
+  frequentlyPostponedTasks: { title: string; count: number; category: Category }[]
+  taskMoveHistory: { taskId: string; title: string; from: string; to: string; reason: "manual" | "morning" | "adjust"; timestamp: string }[]
   motivationHistory: { date: string; score: number }[]
   sleepHistory: { date: string; score: number; duration: number; sleepTime: string; wakeTime: string }[]
   energyHistory: { date: string; level: EnergyLevel }[]
@@ -132,6 +136,14 @@ export interface SemanticMemory {
   preferences: string[]
   projects: string[]
   lastUpdated: string
+}
+
+export interface ConsolidatedMemory {
+  facts: string[]
+  goals: string[]
+  preferences: string[]
+  projects: string[]
+  discarded: string[]
 }
 
 export interface DiaryEntry {

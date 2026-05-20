@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStore } from "@/store/useStore"
-import { testGroqKey } from "@/services/ai"
+import { testGroqKey, consolidateSemanticMemory as aiConsolidateSemanticMemory } from "@/services/ai"
 import { testTelegramConnection } from "@/services/telegram"
 import { exportData, importData, clearAllData } from "@/lib/storage"
 import { resetGroqClient } from "@/services/groq"
@@ -47,6 +47,29 @@ const SettingsPage = () => {
   const removeSemanticPreference = useStore((s) => s.removeSemanticPreference)
   const addSemanticProject = useStore((s) => s.addSemanticProject)
   const removeSemanticProject = useStore((s) => s.removeSemanticProject)
+  const setSemanticMemory = useStore((s) => s.setSemanticMemory)
+  const needsMemoryConsolidation = useStore((s) => s.needsMemoryConsolidation)
+  const [isConsolidating, setIsConsolidating] = useState(false)
+
+  const handleConsolidateMemory = async () => {
+    if (!semanticMemory) return
+    setIsConsolidating(true)
+    try {
+      const result = await aiConsolidateSemanticMemory(semanticMemory)
+      setSemanticMemory({
+        facts: result.facts,
+        goals: result.goals,
+        preferences: result.preferences,
+        projects: result.projects,
+        lastUpdated: new Date().toISOString(),
+      })
+      toast.success(`Память сжата: ${result.discarded.length} элементов удалено`)
+    } catch {
+      toast.error("Ошибка при сжатии памяти")
+    } finally {
+      setIsConsolidating(false)
+    }
+  }
 
   const handleAddMemory = () => {
     if (!newMemoryItem.trim()) return
@@ -486,6 +509,25 @@ const SettingsPage = () => {
                 <p className="text-xs text-muted-foreground">
                   То, что AI знает о тебе. Эти данные используются при составлении плана и корректировке дня.
                 </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleConsolidateMemory}
+                    disabled={isConsolidating || !semanticMemory}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {isConsolidating ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Brain className="h-3 w-3 mr-1" />
+                    )}
+                    {isConsolidating ? "Сжимаю..." : "Сжать память"}
+                  </Button>
+                  {needsMemoryConsolidation() && (
+                    <span className="text-xs text-amber-500 self-center">Память большая — рекомендуется сжатие</span>
+                  )}
+                </div>
                 <div className="flex gap-1 bg-muted rounded-xl p-1">
                   {(["facts", "goals", "preferences", "projects"] as const).map((tab) => (
                     <button
