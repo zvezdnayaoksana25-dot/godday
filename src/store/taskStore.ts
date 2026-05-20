@@ -86,7 +86,19 @@ export const createTaskStore: StateCreator<StoreState, [], [], TaskStore> = (set
   },
 
   deleteTask: (id) => {
-    set((state) => ({ tasks: (state.tasks || []).filter((t) => t.id !== id) }))
+    set((state) => {
+      const task = (state.tasks || []).find((t) => t.id === id)
+      const newTasks = (state.tasks || []).filter((t) => t.id !== id)
+      const newDayPlans = { ...(state.dayPlans || {}) }
+      if (task?.dueDate && newDayPlans[task.dueDate]) {
+        const plan = newDayPlans[task.dueDate]
+        newDayPlans[task.dueDate] = {
+          ...plan,
+          taskIds: plan.taskIds.filter((tid) => tid !== id),
+        }
+      }
+      return { tasks: newTasks, dayPlans: newDayPlans }
+    })
   },
 
   moveTask: (id, status) => {
