@@ -118,6 +118,7 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
   }, [morningSession.step, setMorningStep])
 
   const handleGeneratePlan = async () => {
+    if (morningSession.isLoading) return
     setAILoading(true)
     setAIError(null)
 
@@ -577,54 +578,71 @@ const MorningRoutine = ({ onComplete }: MorningRoutineProps) => {
 
       case "voice":
         return (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-semibold">Что на уме сегодня?</h2>
-              <p className="text-muted-foreground">Напиши или надиктуй</p>
-            </div>
-            <Textarea
-              placeholder="Хочу закончить проект, сходить на прогулку..."
-              value={voiceInput}
-              onChange={(e) => setVoiceInput(e.target.value)}
-              className="min-h-[100px]"
-            />
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-center">Главный фокус дня</p>
-              <Input
-                placeholder="Самое важное сегодня..."
-                value={morningSession.focusOfTheDay}
-                onChange={(e) => setFocusOfTheDay(e.target.value)}
-                className="h-12"
-              />
-            </div>
-
-            {isSpeechSupported() && (
-              <div className="flex justify-center">
-                <Button
-                  variant={isListening ? "destructive" : "soft"}
-                  size="lg"
-                  onClick={toggleListening}
-                  className="rounded-full"
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="mr-2 h-4 w-4" /> Слушаю...
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="mr-2 h-4 w-4" /> Надиктовать
-                    </>
-                  )}
-                </Button>
+          <div className="space-y-6 relative">
+            {morningSession.isLoading && (
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-2xl">
+                <Loader2 className="h-12 w-12 text-primary animate-spin mb-3" />
+                <p className="text-muted-foreground text-sm">Составляю план...</p>
               </div>
             )}
+            <div className={morningSession.isLoading ? "opacity-30 pointer-events-none" : ""}>
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-semibold">Что на уме сегодня?</h2>
+                <p className="text-muted-foreground">Напиши или надиктуй</p>
+              </div>
+              <Textarea
+                placeholder="Хочу закончить проект, сходить на прогулку..."
+                value={voiceInput}
+                onChange={(e) => setVoiceInput(e.target.value)}
+                className="min-h-[100px]"
+              />
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-center">Главный фокус дня</p>
+                <Input
+                  placeholder="Самое важное сегодня..."
+                  value={morningSession.focusOfTheDay}
+                  onChange={(e) => setFocusOfTheDay(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+
+              {isSpeechSupported() && (
+                <div className="flex justify-center">
+                  <Button
+                    variant={isListening ? "destructive" : "soft"}
+                    size="lg"
+                    onClick={toggleListening}
+                    className="rounded-full"
+                    disabled={morningSession.isLoading}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="mr-2 h-4 w-4" /> Слушаю...
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="mr-2 h-4 w-4" /> Надиктовать
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="flex justify-between">
-              <Button variant="ghost" onClick={handleBack}>
+              <Button variant="ghost" onClick={handleBack} disabled={morningSession.isLoading}>
                 <ArrowLeft className="mr-2 h-4 w-4" /> Назад
               </Button>
-              <Button onClick={handleGeneratePlan} size="lg">
-                <Sparkles className="mr-2 h-4 w-4" /> Составить план
+              <Button onClick={handleGeneratePlan} size="lg" disabled={morningSession.isLoading}>
+                {morningSession.isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Думаю...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" /> Составить план
+                  </>
+                )}
               </Button>
             </div>
           </div>
